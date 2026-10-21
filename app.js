@@ -19,11 +19,11 @@ const DEFAULTS = {
 // ---------- Livelli di escalation ----------
 // frac: soglia come frazione dell'anticipo; every: secondi tra notifiche; fullscreen: overlay
 const LEVELS = [
-  { frac: 1.00, every: 15 * 60, vol: 0.10, freq: 440, beeps: 1, vib: [200],                         color: '#0f172a' },
-  { frac: 0.67, every: 10 * 60, vol: 0.20, freq: 520, beeps: 2, vib: [200, 100, 200],               color: '#1e3a8a' },
-  { frac: 0.42, every:  5 * 60, vol: 0.40, freq: 620, beeps: 3, vib: [300, 100, 300, 100, 300],    color: '#92400e' },
-  { frac: 0.17, every:  2 * 60, vol: 0.65, freq: 740, beeps: 4, vib: [500, 100, 500, 100, 500],    color: '#ea580c', fullscreen: true },
-  { frac: 0.00, every:     30,  vol: 1.00, freq: 880, beeps: 6, vib: [800, 100, 800, 100, 800, 100, 800], color: '#dc2626', fullscreen: true }
+  { frac: 1.00, every: 15 * 60, vol: 0.10, freq: 440, beeps: 1, vib: [250],                                      color: '#0f172a' },
+  { frac: 0.67, every: 10 * 60, vol: 0.20, freq: 520, beeps: 2, vib: [350, 120, 350],                            color: '#1e3a8a' },
+  { frac: 0.42, every:  5 * 60, vol: 0.40, freq: 620, beeps: 3, vib: [500, 120, 500, 120, 500],                 color: '#92400e' },
+  { frac: 0.17, every:  2 * 60, vol: 0.65, freq: 740, beeps: 4, vib: [800, 120, 800, 120, 800, 120, 800],       color: '#ea580c', fullscreen: true },
+  { frac: 0.00, every:     30,  vol: 1.00, freq: 880, beeps: 6, vib: [1200, 120, 1200, 120, 1200, 120, 1200, 120, 1200], color: '#dc2626', fullscreen: true }
 ];
 const FREQUENCY_FACTORS = [2, 1.5, 1, 0.75, 0.5];
 const notificationInterval = level => {
@@ -497,7 +497,7 @@ function planOccurrence(startMs, lead, grace) {
 
 async function ensureChannel(level) {
   const s = state.settings;
-  const id = `motiva_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}_h4`;
+  const id = `motiva_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}_h5`;
   if (!channelsDone.has(id)) {
     await LN.createChannel({
       id, name: `Livello ${level + 1}${s.vib ? '' : ' (senza vibrazione)'}${s.sound ? '' : ' (silenzioso)'}`,
