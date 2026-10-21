@@ -3,41 +3,107 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="#f6f7fb">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
 <title>Motivatore</title>
 <style>
-  :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--txt:#e2e8f0;--mut:#94a3b8;--acc:#22c55e;--warn:#f59e0b;--bad:#ef4444}
+  :root{
+    --bg:#f6f7fb; --card:#ffffff; --line:#e8eaf2; --txt:#1f2437; --mut:#7b8197;
+    --acc:#6366f1; --acc2:#8b5cf6; --accSoft:#eef0ff;
+    --ok:#10b981; --okSoft:#e6f8f1; --warn:#f59e0b; --warnSoft:#fff4e0; --bad:#ef4444; --badSoft:#fdeaea;
+    --shadow:0 1px 2px rgba(31,36,55,.04),0 8px 24px rgba(31,36,55,.06);
+    --r:16px;
+  }
   *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--txt);padding:16px;max-width:640px;margin-inline:auto}
-  h1{font-size:1.4rem;margin:.2rem 0 1rem}
-  h2{font-size:1rem;margin:0 0 .6rem;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
-  section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
-  button{font:inherit;border:0;border-radius:8px;padding:.55rem .9rem;background:#334155;color:var(--txt);cursor:pointer}
-  button.primary{background:var(--acc);color:#052e16;font-weight:600}
-  button.danger{background:transparent;color:var(--bad)}
-  input[type=text],input[type=time],input[type=number]{font:inherit;background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:.5rem;width:100%}
-  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:.5rem 0}
-  .days label{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.3rem .5rem}
-  .item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:.6rem 0;border-top:1px solid var(--line)}
-  .item:first-of-type{border-top:0}
-  .tag{font-size:.75rem;padding:.1rem .5rem;border-radius:99px;background:var(--bg);color:var(--mut)}
-  .tag.ok{color:var(--acc)} .tag.wait{color:var(--warn)}
-  .mut{color:var(--mut);font-size:.85rem}
-  .toggle{display:flex;justify-content:space-between;align-items:center;padding:.45rem 0}
-  #overlay{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;z-index:99;transition:background .5s}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;padding:20px 16px 48px;max-width:560px;margin-inline:auto;
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    background:var(--bg);color:var(--txt);line-height:1.45;
+    background-image:radial-gradient(520px 260px at 90% -40px,#e4e6ff 0,transparent 70%);
+    background-repeat:no-repeat;
+  }
+
+  header{display:flex;align-items:center;gap:12px;margin:4px 0 20px}
+  .logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:24px;
+    background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 6px 16px rgba(99,102,241,.35)}
+  h1{font-size:1.5rem;margin:0;letter-spacing:-.02em}
+  .sub{color:var(--mut);font-size:.9rem;margin:0}
+
+  section{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
+  h2{font-size:.78rem;margin:0 0 12px;color:var(--mut);text-transform:uppercase;letter-spacing:.09em;font-weight:700}
+
+  button{font:inherit;font-weight:600;border:0;border-radius:12px;padding:.62rem 1rem;background:var(--accSoft);color:var(--acc);cursor:pointer;
+    transition:transform .08s,box-shadow .15s,background .15s}
+  button:hover{background:#e3e6ff}
+  button:active{transform:scale(.97)}
+  button:focus-visible,input:focus-visible{outline:3px solid rgba(99,102,241,.35);outline-offset:2px}
+  button.primary{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;box-shadow:0 6px 14px rgba(99,102,241,.3)}
+  button.primary:hover{box-shadow:0 8px 18px rgba(99,102,241,.4);background:linear-gradient(135deg,var(--acc),var(--acc2))}
+  button.danger{background:transparent;color:var(--bad);padding:.4rem .6rem}
+  button.danger:hover{background:var(--badSoft)}
+
+  input[type=text],input[type=time],input[type=number]{
+    font:inherit;width:100%;background:#fafbff;color:var(--txt);border:1.5px solid var(--line);border-radius:12px;padding:.65rem .8rem;transition:border-color .15s,box-shadow .15s}
+  input[type=text]:focus,input[type=time]:focus,input[type=number]:focus{outline:0;border-color:var(--acc);box-shadow:0 0 0 4px rgba(99,102,241,.12)}
+  input::placeholder{color:#a9aec2}
+
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:.6rem 0}
+  .row > label{flex:1;min-width:140px}
+
+  /* giorni come chip */
+  .days{gap:6px}
+  .days label{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:46px;padding:.45rem .7rem;
+    border-radius:999px;background:#fafbff;border:1.5px solid var(--line);color:var(--mut);font-size:.85rem;font-weight:600;cursor:pointer;transition:all .15s;user-select:none}
+  .days label input{position:absolute;opacity:0;pointer-events:none}
+  .days label:has(input:checked){background:var(--accSoft);border-color:var(--acc);color:var(--acc)}
+  .days label:has(input:focus-visible){outline:3px solid rgba(99,102,241,.35);outline-offset:2px}
+
+  /* liste */
+  .item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+  .item:first-child{border-top:0;padding-top:2px}
+  .item:last-child{padding-bottom:2px}
+  .item strong{font-size:1rem}
+  .mut{color:var(--mut);font-size:.88rem}
+  .tag{display:inline-block;font-size:.72rem;font-weight:700;padding:.16rem .6rem;border-radius:999px;background:var(--accSoft);color:var(--acc);vertical-align:middle;margin-left:4px}
+  .tag.ok{background:var(--okSoft);color:var(--ok)}
+  .tag.wait{background:var(--warnSoft);color:#b7791f}
+
+  /* interruttori */
+  .toggle{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:11px 0;border-top:1px solid var(--line)}
+  .toggle:first-of-type{border-top:0}
+  .toggle input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:999px;background:#d9dcea;position:relative;cursor:pointer;transition:background .2s}
+  .toggle input[type=checkbox]::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+  .toggle input[type=checkbox]:checked{background:linear-gradient(135deg,var(--acc),var(--acc2))}
+  .toggle input[type=checkbox]:checked::after{transform:translateX(18px)}
+  .settings-tools{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
+
+  .banner{display:none;background:var(--warnSoft);border:1px solid #fbd38d;color:#8a5a0b;border-radius:14px;padding:.8rem 1rem;margin-bottom:16px;align-items:center;justify-content:space-between;gap:12px}
+  .note{margin:10px 0 0}
+
+  /* overlay a schermo intero */
+  #overlay{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;z-index:99;transition:background .5s;color:#fff}
   #overlay.show{display:flex}
-  #ovTitle{font-size:1rem;opacity:.85;margin-bottom:.5rem}
-  #ovMsg{font-size:clamp(1.6rem,6vw,2.6rem);font-weight:800;margin:.5rem 0 1rem}
-  #ovCount{font-size:1.2rem;margin-bottom:2rem;font-variant-numeric:tabular-nums}
-  #ovBtn{font-size:1.4rem;padding:1rem 2rem;background:#fff;color:#111;font-weight:800;border-radius:14px}
-  .banner{background:#422006;border:1px solid var(--warn);color:#fde68a;border-radius:10px;padding:.6rem .8rem;margin-bottom:12px;display:none}
+  #ovTitle{font-size:.95rem;font-weight:600;opacity:.85;margin-bottom:.5rem;letter-spacing:.04em;text-transform:uppercase}
+  #ovMsg{font-size:clamp(1.7rem,6.5vw,2.8rem);font-weight:800;line-height:1.15;margin:.5rem 0 1rem;letter-spacing:-.02em;max-width:18ch}
+  #ovCount{font-size:1.2rem;margin-bottom:2rem;font-variant-numeric:tabular-nums;opacity:.95}
+  #ovBtn{font-size:1.25rem;padding:1rem 2.2rem;background:#fff;color:#1f2437;font-weight:800;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  #ovBtn:hover{background:#fff}
+
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
-<h1>💪 Motivatore</h1>
-<div id="permBanner" class="banner">Le notifiche di sistema non sono attive. <button id="permBtn" class="primary">Attivale</button></div>
+<header>
+  <div class="logo">💪</div>
+  <div>
+    <h1>Motivatore</h1>
+    <p class="sub">Niente scuse: ti spinge finché non parti.</p>
+  </div>
+</header>
+
+<div id="permBanner" class="banner"><span>Le notifiche di sistema non sono attive.</span> <button id="permBtn" class="primary">Attivale</button></div>
 
 <section>
   <h2>Oggi</h2>
@@ -62,12 +128,14 @@
   <div class="toggle"><span>Vibrazione crescente</span><input type="checkbox" id="sVib"></div>
   <div class="toggle"><span>Suoni crescenti</span><input type="checkbox" id="sSound"></div>
   <div class="toggle"><span>Messaggi sempre più decisi</span><input type="checkbox" id="sMsg"></div>
-  <div class="toggle"><span>Schermo intero / blocco nei livelli finali</span><input type="checkbox" id="sFull"></div>
+  <div class="toggle"><span>Schermo intero nei livelli finali</span><input type="checkbox" id="sFull"></div>
   <div class="toggle"><span>Notifiche di sistema</span><input type="checkbox" id="sNotif"></div>
-  <div class="row"><label class="mut" style="flex:1">Anticipo prima notifica (minuti)<input type="number" id="sLead" min="5" max="240"></label>
-  <label class="mut" style="flex:1">Tolleranza dopo l'orario (minuti)<input type="number" id="sGrace" min="0" max="120"></label></div>
-  <div class="row"><button id="sTest">▶ Simula escalation (60× più veloce)</button><button id="sStop" class="danger">Ferma simulazione</button></div>
-  <p class="mut">L'app deve restare aperta (anche in background) per far scattare le notifiche. Il primo tocco sulla pagina sblocca l'audio.</p>
+  <div class="row settings-tools">
+    <label class="mut">Anticipo prima notifica (min)<input type="number" id="sLead" min="5" max="240"></label>
+    <label class="mut">Tolleranza dopo l'orario (min)<input type="number" id="sGrace" min="0" max="120"></label>
+  </div>
+  <div class="row"><button id="sTest">▶ Simula escalation</button><button id="sStop" class="danger">Ferma</button></div>
+  <p class="mut note">La simulazione va 60 volte più veloce. L'app deve restare aperta (anche in background) per far scattare le notifiche. Il primo tocco sulla pagina sblocca l'audio.</p>
 </section>
 
 <div id="overlay">

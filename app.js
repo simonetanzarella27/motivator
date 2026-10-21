@@ -15,8 +15,8 @@ const LEVELS = [
   { frac: 1.00, every: 15 * 60, vol: 0.10, freq: 440, beeps: 1, vib: [200],                         color: '#0f172a' },
   { frac: 0.67, every: 10 * 60, vol: 0.20, freq: 520, beeps: 2, vib: [200, 100, 200],               color: '#1e3a8a' },
   { frac: 0.42, every:  5 * 60, vol: 0.40, freq: 620, beeps: 3, vib: [300, 100, 300, 100, 300],    color: '#92400e' },
-  { frac: 0.17, every:  2 * 60, vol: 0.65, freq: 740, beeps: 4, vib: [500, 100, 500, 100, 500],    color: '#b45309', fullscreen: true },
-  { frac: 0.00, every:     30,  vol: 1.00, freq: 880, beeps: 6, vib: [800, 100, 800, 100, 800, 100, 800], color: '#b91c1c', fullscreen: true }
+  { frac: 0.17, every:  2 * 60, vol: 0.65, freq: 740, beeps: 4, vib: [500, 100, 500, 100, 500],    color: '#ea580c', fullscreen: true },
+  { frac: 0.00, every:     30,  vol: 1.00, freq: 880, beeps: 6, vib: [800, 100, 800, 100, 800, 100, 800], color: '#dc2626', fullscreen: true }
 ];
 
 const MESSAGES = [
@@ -246,7 +246,7 @@ $('#sGrace').addEventListener('change', e => { state.settings.grace = Math.max(0
 
 function updatePermBanner() {
   const need = state.settings.notif && 'Notification' in window && Notification.permission !== 'granted';
-  $('#permBanner').style.display = need ? 'block' : 'none';
+  $('#permBanner').style.display = need ? 'flex' : 'none';
 }
 function askPermission() {
   if (!('Notification' in window)) return;
