@@ -42,6 +42,11 @@
   .logo{width:46px;height:46px;padding:0;border:0;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:1.35rem;letter-spacing:-.04em;cursor:pointer;flex:none;
     background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 6px 16px rgba(99,102,241,.35)}
   .logo:hover{background:linear-gradient(135deg,var(--acc),var(--acc2))}
+  .logo.squish{animation:logo-squish .28s cubic-bezier(.2,.8,.25,1)}
+  @keyframes logo-squish{0%,100%{transform:scale(1)}35%{transform:scale(1.16,.82)}65%{transform:scale(.94,1.08)}}
+  #debugToast{position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;z-index:120;transform:translate(-50%,-12px);width:max-content;max-width:calc(100vw - 32px);padding:11px 16px;border:1px solid rgba(255,255,255,.16);border-radius:14px;background:#202334;color:#fff;box-shadow:0 12px 36px rgba(14,16,27,.25);font-size:.88rem;font-weight:650;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+  #debugToast.show{transform:translate(-50%,0);opacity:1}
+  #debugToast[hidden]{display:none}
   h1{font-size:1.6rem;margin:0;letter-spacing:.06em;font-weight:900}
   .sub{color:var(--mut);font-size:.9rem;margin:0}
   .settings-open{margin-left:auto;display:grid;place-items:center;width:44px;height:44px;padding:.5rem;background:transparent;color:var(--mut)}
@@ -144,31 +149,28 @@
   #installBox ol{margin:.4rem 0 0;padding-left:1.2rem}
 
   /* Overlay a schermo intero */
-  #overlay{--level-color:#dc2626;position:fixed;inset:0;display:none;justify-content:center;align-items:center;overflow-y:auto;overscroll-behavior:contain;padding:max(22px,env(safe-area-inset-top)) 20px max(22px,env(safe-area-inset-bottom));z-index:99;color:#fff;background:radial-gradient(ellipse at 50% 0%,color-mix(in srgb,var(--level-color) 72%,#fff 8%),transparent 58%),linear-gradient(155deg,#171b2b 0%,#11131b 70%);isolation:isolate}
-  #overlay::before,#overlay::after{content:"";position:absolute;z-index:-1;border:1px solid rgba(255,255,255,.08);border-radius:50%;width:min(90vw,520px);aspect-ratio:1;pointer-events:none}
-  #overlay::before{transform:translateY(-28%);box-shadow:0 0 100px color-mix(in srgb,var(--level-color) 28%,transparent)}
-  #overlay::after{width:min(120vw,680px);transform:translateY(-28%)}
-  #overlay.show{display:flex;animation:overlay-enter .45s cubic-bezier(.2,.8,.2,1) both}
-  .overlay-card{width:min(100%,520px);padding:clamp(26px,7vw,44px) clamp(22px,6vw,40px);text-align:center;border:1px solid rgba(255,255,255,.16);border-radius:30px;background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.055));box-shadow:0 28px 90px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.14);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
-  .overlay-symbol{display:grid;place-items:center;width:66px;height:66px;margin:0 auto 22px;border-radius:22px;color:#fff;background:color-mix(in srgb,var(--level-color) 52%,#fff 10%);box-shadow:0 10px 34px color-mix(in srgb,var(--level-color) 48%,transparent),inset 0 1px rgba(255,255,255,.35)}
-  .overlay-symbol svg{width:30px;height:30px}
-  #ovTitle{font-size:.78rem;font-weight:750;opacity:.78;margin-bottom:20px;letter-spacing:.14em;text-transform:uppercase}
-  .overlay-progress{display:flex;gap:7px;max-width:260px;margin:0 auto 25px}
-  .overlay-progress span{height:5px;flex:1;border-radius:99px;background:rgba(255,255,255,.2);transition:background .3s,box-shadow .3s}
-  .overlay-progress span.active{background:#fff;box-shadow:0 0 12px rgba(255,255,255,.6)}
-  #ovMsg{font-size:clamp(1.8rem,7.5vw,3rem);font-weight:850;line-height:1.08;margin:0 auto 26px;letter-spacing:-.045em;text-wrap:balance;max-width:17ch}
-  .overlay-timing{display:inline-flex;align-items:center;gap:9px;min-height:46px;padding:0 16px;margin-bottom:28px;border:1px solid rgba(255,255,255,.17);border-radius:99px;background:rgba(10,12,20,.22);font-size:.98rem;font-weight:650;font-variant-numeric:tabular-nums}
-  .overlay-timing svg{width:17px;height:17px;opacity:.8}
-  #ovBtn{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;min-height:62px;padding:12px 20px;border:0;border-radius:19px;background:#fff;color:#191b27;font-size:1.08rem;font-weight:800;letter-spacing:-.01em;box-shadow:0 12px 30px rgba(0,0,0,.24);transition:transform .16s,box-shadow .16s}
-  #ovBtn:hover{background:#fff;box-shadow:0 15px 36px rgba(0,0,0,.3);transform:translateY(-2px)}
+  #overlay{--level-color:#dc2626;position:fixed;inset:0;display:none;justify-content:center;align-items:center;overflow-y:auto;overscroll-behavior:contain;padding:max(22px,env(safe-area-inset-top)) 24px max(22px,env(safe-area-inset-bottom));z-index:99;color:#fff;background:radial-gradient(ellipse at 50% 0%,color-mix(in srgb,var(--level-color) 46%,#171b2b),transparent 68%),#11131b}
+  #overlay.show{display:flex;animation:overlay-enter .3s ease-out both}
+  .overlay-card{width:min(100%,440px);padding:clamp(20px,6vh,42px) 8px;text-align:center}
+  .overlay-symbol{display:grid;place-items:center;width:54px;height:54px;margin:0 auto 26px;border-radius:18px;color:#fff;background:color-mix(in srgb,var(--level-color) 72%,#242638);box-shadow:0 8px 24px rgba(0,0,0,.18)}
+  .overlay-symbol svg{width:25px;height:25px}
+  #ovTitle{font-size:.76rem;font-weight:700;color:rgba(255,255,255,.72);margin-bottom:16px;letter-spacing:.12em;text-transform:uppercase}
+  .overlay-progress{display:flex;gap:6px;max-width:190px;margin:0 auto 28px}
+  .overlay-progress span{height:4px;flex:1;border-radius:99px;background:rgba(255,255,255,.2);transition:background .25s}
+  .overlay-progress span.active{background:#fff}
+  #ovMsg{font-size:clamp(1.9rem,8vw,3.1rem);font-weight:800;line-height:1.08;margin:0 auto 24px;letter-spacing:-.045em;text-wrap:balance;max-width:17ch}
+  .overlay-timing{display:inline-flex;align-items:center;gap:8px;min-height:42px;padding:0 13px;margin-bottom:30px;border-radius:99px;background:rgba(255,255,255,.09);color:rgba(255,255,255,.86);font-size:.9rem;font-weight:600;font-variant-numeric:tabular-nums}
+  .overlay-timing svg{width:16px;height:16px;opacity:.8}
+  #ovBtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:58px;padding:12px 20px;border:0;border-radius:16px;background:#fff;color:#191b27;font-size:1rem;font-weight:750;letter-spacing:-.01em;box-shadow:0 8px 22px rgba(0,0,0,.2);transition:transform .16s,box-shadow .16s}
+  #ovBtn:hover{background:#fff;box-shadow:0 12px 28px rgba(0,0,0,.25);transform:translateY(-1px)}
   #ovBtn:active{transform:scale(.98)}
   #ovBtn:focus-visible{outline:3px solid rgba(255,255,255,.7);outline-offset:4px}
-  .overlay-button-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#e9eaff;color:#4c50c8;font-size:1rem}
-  .overlay-hint{margin:15px 0 0;color:rgba(255,255,255,.58);font-size:.78rem}
+  .overlay-button-icon{display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#e9eaff;color:#4c50c8;font-size:.95rem}
+  .overlay-hint{margin:13px 0 0;color:rgba(255,255,255,.52);font-size:.76rem}
   @keyframes overlay-enter{from{opacity:0}to{opacity:1}}
   @media(max-height:620px){.overlay-card{padding:20px}.overlay-symbol{width:48px;height:48px;margin-bottom:14px;border-radius:16px}.overlay-symbol svg{width:24px;height:24px}#ovTitle{margin-bottom:12px}.overlay-progress{margin-bottom:17px}#ovMsg{margin-bottom:17px}.overlay-timing{margin-bottom:18px}}
 
-  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation-duration:.01ms!important;animation-iteration-count:1!important}}
 </style>
 </head>
 <body>
@@ -185,6 +187,7 @@
     </svg>
   </button>
 </header>
+<div id="debugToast" role="status" aria-live="polite" hidden></div>
 
 <div id="permBanner" class="banner"><span>Le notifiche di sistema non sono attive.</span> <button id="permBtn" class="primary">Attivale</button></div>
 
@@ -290,6 +293,6 @@
   </div>
 </div>
 
-<script src="app.js?v=motiva-v12"></script>
+<script src="app.js?v=motiva-v13"></script>
 </body>
 </html>

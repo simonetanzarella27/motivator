@@ -49,6 +49,7 @@ let nativeReminderLaunch = null;
 let debugMode = false;
 let debugTapCount = 0;
 let debugTapTimer = null;
+let debugToastTimer = null;
 
 function load() {
   try {
@@ -349,9 +350,22 @@ function setDebugMode(enabled) {
   $('#nativeTestTools').hidden = !enabled || !NATIVE;
   $('#nativeScheduleStatus').hidden = !enabled || !NATIVE;
   if (!enabled) $('#nativeTestResult').hidden = true;
+  const toast = $('#debugToast');
+  toast.textContent = enabled ? 'Modalità debug attivata' : 'Modalità debug disattivata';
+  toast.hidden = false;
+  toast.classList.add('show');
+  clearTimeout(debugToastTimer);
+  debugToastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+    debugToastTimer = setTimeout(() => { toast.hidden = true; }, 220);
+  }, 2400);
 }
 
 $('#appLogo').addEventListener('click', () => {
+  const logo = $('#appLogo');
+  logo.classList.remove('squish');
+  void logo.offsetWidth;
+  logo.classList.add('squish');
   debugTapCount++;
   clearTimeout(debugTapTimer);
   if (debugTapCount >= 10) {
@@ -896,7 +910,6 @@ if ('serviceWorker' in navigator && !NATIVE) navigator.serviceWorker.register('s
 if (NATIVE) {
   const note = $('#settingsNote');
   if (note) note.textContent = 'Le notifiche sono programmate da Android anche con l’app chiusa. La frequenza richiesta è mostrata nello stato qui sopra; Android può ritardare gli allarmi ravvicinati. Per testare lo schermo intero, blocca il telefono: con lo schermo acceso Android può mostrare solo un banner.';
-  $('#nativeScheduleStatus').hidden = false;
 }
 render();
 setInterval(tick, 1000);
