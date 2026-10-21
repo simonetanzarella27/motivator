@@ -46,6 +46,9 @@ const runtime = {};          // chiave occorrenza -> { level, lastFire }
 let sim = null;              // { realStart, simStart, speed, startMs, leadMin }
 let audioCtx = null;
 let nativeReminderLaunch = null;
+let debugMode = false;
+let debugTapCount = 0;
+let debugTapTimer = null;
 
 function load() {
   try {
@@ -333,9 +336,31 @@ function renderSettings() {
   $('#sGrace').value = state.settings.grace;
   $('#sFrequency').value = state.settings.frequency;
   $('#sFrequencyValue').textContent = FREQUENCY_LABELS[state.settings.frequency - 1] || 'Normale';
-  $('#nativeTestTools').hidden = !NATIVE;
+  $('#nativeTestTools').hidden = !NATIVE || !debugMode;
+  $('#debugTools').hidden = !debugMode;
+  $('#nativeScheduleStatus').hidden = !NATIVE || !debugMode;
   updatePermBanner();
 }
+
+function setDebugMode(enabled) {
+  debugMode = enabled;
+  $('#debugTools').hidden = !enabled;
+  $('#debugModeStatus').hidden = !enabled;
+  $('#nativeTestTools').hidden = !enabled || !NATIVE;
+  $('#nativeScheduleStatus').hidden = !enabled || !NATIVE;
+  if (!enabled) $('#nativeTestResult').hidden = true;
+}
+
+$('#appLogo').addEventListener('click', () => {
+  debugTapCount++;
+  clearTimeout(debugTapTimer);
+  if (debugTapCount >= 10) {
+    debugTapCount = 0;
+    setDebugMode(!debugMode);
+    return;
+  }
+  debugTapTimer = setTimeout(() => { debugTapCount = 0; }, 2500);
+});
 $('#sDark').addEventListener('change', e => {
   state.settings.dark = e.currentTarget.checked;
   applyTheme();
@@ -689,7 +714,7 @@ async function nativeReschedule() {
 
 function nativeScheduleStatus(message, error = false) {
   const status = $('#nativeScheduleStatus');
-  status.hidden = false;
+  status.hidden = !debugMode;
   status.textContent = message;
   status.classList.toggle('test-error', error);
 }

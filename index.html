@@ -39,8 +39,9 @@
   }
 
   header{display:flex;align-items:center;gap:12px;margin:4px 0 20px}
-  .logo{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:1.35rem;letter-spacing:-.04em;
+  .logo{width:46px;height:46px;padding:0;border:0;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:1.35rem;letter-spacing:-.04em;cursor:pointer;flex:none;
     background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 6px 16px rgba(99,102,241,.35)}
+  .logo:hover{background:linear-gradient(135deg,var(--acc),var(--acc2))}
   h1{font-size:1.6rem;margin:0;letter-spacing:.06em;font-weight:900}
   .sub{color:var(--mut);font-size:.9rem;margin:0}
   .settings-open{margin-left:auto;display:grid;place-items:center;width:44px;height:44px;padding:.5rem;background:transparent;color:var(--mut)}
@@ -71,6 +72,7 @@
   .form-error[hidden]{display:none}
   .mut.test-error{color:var(--bad)}
   #nativeTestTools[hidden]{display:none}
+  #debugTools[hidden]{display:none}
   input[type=range]{width:100%;accent-color:var(--acc);margin:.45rem 0}
 
   /* giorni come chip */
@@ -171,7 +173,7 @@
 </head>
 <body>
 <header>
-  <div class="logo">M</div>
+  <button type="button" class="logo" id="appLogo" aria-label="Motiva">M</button>
   <div>
     <h1>Motiva</h1>
     <p class="sub">Niente scuse: ti spinge finché non parti.</p>
@@ -251,13 +253,16 @@
       <span class="mut">Meno frequenti</span> <span class="mut" style="float:right">Più frequenti</span>
     </label>
   </div>
-  <div class="row"><button id="sTest">▶ Simula escalation</button><button id="sStop" class="danger">Ferma</button></div>
-  <div class="row" id="nativeTestTools" hidden>
-    <button type="button" id="sTestNotification">Prova notifica, suono e vibrazione</button>
-    <button type="button" id="sTestFullscreen">Prova schermo intero</button>
+  <div id="debugTools" hidden>
+    <p class="mut note" id="debugModeStatus" role="status">Modalità debug attiva.</p>
+    <div class="row"><button id="sTest">▶ Simula escalation</button><button id="sStop" class="danger">Ferma</button></div>
+    <div class="row" id="nativeTestTools" hidden>
+      <button type="button" id="sTestNotification">Prova notifica, suono e vibrazione</button>
+      <button type="button" id="sTestFullscreen">Prova schermo intero</button>
+    </div>
+    <p class="mut note" id="nativeScheduleStatus" role="status" aria-live="polite" hidden></p>
+    <p class="mut note" id="nativeTestResult" role="status" aria-live="polite" hidden></p>
   </div>
-  <p class="mut note" id="nativeScheduleStatus" role="status" aria-live="polite" hidden></p>
-  <p class="mut note" id="nativeTestResult" role="status" aria-live="polite" hidden></p>
   <p class="mut note" id="settingsNote">La simulazione va 60 volte più veloce. L'app deve restare aperta (anche in background) per far scattare le notifiche. Il primo tocco sulla pagina sblocca l'audio.</p>
 </dialog>
 
@@ -285,6 +290,6 @@
   </div>
 </div>
 
-<script src="app.js?v=motiva-v11"></script>
+<script src="app.js?v=motiva-v12"></script>
 </body>
 </html>
