@@ -1,8 +1,8 @@
-# Motivatore
+# MUVT
 
-PWA locale che ti motiva con notifiche a intensità crescente finché non confermi di star svolgendo la routine.
+PWA che ti motiva con notifiche a intensità crescente finché non confermi di star svolgendo la routine. Include calendario mensile.
 
-## Avvio
+## Avvio in locale
 
 ```
 python3 -m http.server 8000

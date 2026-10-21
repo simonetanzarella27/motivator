@@ -112,7 +112,7 @@ async function notify(o, level, body) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const opts = {
     body, tag: 'motivatore-' + o.id, renotify: true,
-    requireInteraction: level >= 3, vibrate: LEVELS[level].vib, icon: 'icon.svg'
+    requireInteraction: level >= 3, vibrate: LEVELS[level].vib, icon: 'icon-192.png'
   };
   try {
     const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : null;
@@ -212,7 +212,7 @@ $('#list').addEventListener('click', e => {
   state.routines = state.routines.filter(r => r.id !== id); save(); render();
 });
 
-function render() { renderList(); renderToday(); renderSettings(); }
+function render() { renderList(); renderToday(); renderCalendar(); renderSettings(); }
 
 $('#rDays').innerHTML = DAYS.map((d, i) =>
   `<label><input type="checkbox" value="${i}" ${i < 5 ? 'checked' : ''}> ${d}</label>`).join('');
@@ -261,6 +261,97 @@ function unlockAudio() {
   } catch (e) {}
 }
 document.addEventListener('click', unlockAudio, { once: true });
+
+// ---------- Calendario ----------
+const MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+let calMonth = new Date(); calMonth.setDate(1); calMonth.setHours(0, 0, 0, 0);
+let calSel = dateKey(new Date());
+
+const keyToDate = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+
+function routinesOn(date) {
+  const wd = weekday(date), k = dateKey(date);
+  return state.routines
+    .filter(r => r.days.includes(wd))
+    .map(r => ({ r, key: k + '|' + r.id, done: !!state.done[k + '|' + r.id] }))
+    .sort((a, b) => a.r.time.localeCompare(b.r.time));
+}
+
+function statusOf(item, dateK, todayK) {
+  if (item.done) return 'ok';
+  if (dateK < todayK) return 'miss';
+  if (dateK === todayK) {
+    const [h, m] = item.r.time.split(':').map(Number), now = new Date();
+    return now.getHours() * 60 + now.getMinutes() > h * 60 + m ? 'late' : 'todo';
+  }
+  return 'todo';
+}
+
+function renderCalendar() {
+  const y = calMonth.getFullYear(), m = calMonth.getMonth();
+  $('#calTitle').textContent = `${MONTHS[m]} ${y}`;
+  const todayK = dateKey(new Date());
+  const offset = weekday(new Date(y, m, 1)), dim = new Date(y, m + 1, 0).getDate();
+  let html = DAYS.map(d => `<div class="cal-h">${d}</div>`).join('');
+  for (let i = 0; i < offset; i++) html += '<div></div>';
+  for (let d = 1; d <= dim; d++) {
+    const date = new Date(y, m, d), k = dateKey(date);
+    const dots = routinesOn(date).slice(0, 3).map(it => {
+      const s = statusOf(it, k, todayK);
+      return `<i class="dot ${s === 'ok' ? 'ok' : s === 'miss' ? 'miss' : ''}"></i>`;
+    }).join('');
+    const cls = ['cal-d', k === todayK ? 'today' : '', k === calSel ? 'sel' : '', k < todayK ? 'past' : ''].join(' ');
+    html += `<button class="${cls}" data-date="${k}" aria-label="${d} ${MONTHS[m]}"><span>${d}</span><span class="dots">${dots}</span></button>`;
+  }
+  $('#calGrid').innerHTML = html;
+  renderCalDetail();
+}
+
+function renderCalDetail() {
+  const date = keyToDate(calSel), todayK = dateKey(new Date());
+  const label = date.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+  const items = routinesOn(date);
+  const TAGS = { ok: ['ok', 'confermata'], miss: ['miss', 'saltata'], late: ['wait', 'in ritardo'], todo: ['', 'in programma'] };
+  const body = items.length
+    ? items.map(it => {
+        const [c, t] = TAGS[statusOf(it, calSel, todayK)];
+        return `<div class="item"><div><strong>${esc(it.r.name)}</strong> <span class="mut">${esc(it.r.time)}</span> <span class="tag ${c}">${t}</span></div></div>`;
+      }).join('')
+    : '<div class="mut">Nessuna routine in questo giorno.</div>';
+  $('#calDetail').innerHTML = `<h4>${esc(label)}</h4>${body}`;
+}
+
+$('#calGrid').addEventListener('click', e => {
+  const b = e.target.closest('[data-date]');
+  if (!b) return;
+  calSel = b.dataset.date; renderCalendar();
+});
+$('#calPrev').addEventListener('click', () => { calMonth.setMonth(calMonth.getMonth() - 1); renderCalendar(); });
+$('#calNext').addEventListener('click', () => { calMonth.setMonth(calMonth.getMonth() + 1); renderCalendar(); });
+$('#calToday').addEventListener('click', () => {
+  const n = new Date(); calMonth = new Date(n.getFullYear(), n.getMonth(), 1); calSel = dateKey(n); renderCalendar();
+});
+
+// ---------- Installazione PWA ----------
+let deferredInstall = null;
+const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+if (!standalone) {
+  $('#installBox').style.display = 'block';
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  $('#installHint').textContent = ios
+    ? 'Su iPhone/iPad: apri la pagina in Safari, tocca Condividi e scegli «Aggiungi alla schermata Home».'
+    : 'Se il pulsante non compare: menu ⋮ del browser → «Installa app» o «Aggiungi a schermata Home». Serve la pagina in HTTPS.';
+}
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredInstall = e; $('#installBtn').style.display = 'inline-block';
+});
+$('#installBtn').addEventListener('click', async () => {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  try { await deferredInstall.userChoice; } catch (e) {}
+  deferredInstall = null; $('#installBtn').style.display = 'none';
+});
+window.addEventListener('appinstalled', () => { $('#installBox').style.display = 'none'; });
 
 // ---------- Avvio ----------
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

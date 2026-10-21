@@ -2,11 +2,15 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f6f7fb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MUVT">
 <link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg">
-<title>Motivatore</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>MUVT</title>
 <style>
   :root{
     --bg:#f6f7fb; --card:#ffffff; --line:#e8eaf2; --txt:#1f2437; --mut:#7b8197;
@@ -26,9 +30,9 @@
   }
 
   header{display:flex;align-items:center;gap:12px;margin:4px 0 20px}
-  .logo{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-size:24px;
+  .logo{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:1.35rem;letter-spacing:-.04em;
     background:linear-gradient(135deg,var(--acc),var(--acc2));box-shadow:0 6px 16px rgba(99,102,241,.35)}
-  h1{font-size:1.5rem;margin:0;letter-spacing:-.02em}
+  h1{font-size:1.6rem;margin:0;letter-spacing:.06em;font-weight:900}
   .sub{color:var(--mut);font-size:.9rem;margin:0}
 
   section{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:16px;box-shadow:var(--shadow)}
@@ -69,6 +73,33 @@
   .tag{display:inline-block;font-size:.72rem;font-weight:700;padding:.16rem .6rem;border-radius:999px;background:var(--accSoft);color:var(--acc);vertical-align:middle;margin-left:4px}
   .tag.ok{background:var(--okSoft);color:var(--ok)}
   .tag.wait{background:var(--warnSoft);color:#b7791f}
+  .tag.miss{background:var(--badSoft);color:var(--bad)}
+
+  /* calendario */
+  .cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+  .cal-head h3{margin:0;font-size:1.1rem;text-transform:capitalize;letter-spacing:-.01em}
+  .cal-nav{display:flex;gap:6px}
+  .cal-nav button{padding:.4rem .75rem;min-width:40px}
+  #calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal-h{text-align:center;font-size:.7rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.06em;padding:4px 0}
+  .cal-d{position:relative;aspect-ratio:1/1.05;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    background:transparent;color:var(--txt);border-radius:12px;padding:0;font-weight:600;font-size:.95rem}
+  .cal-d:hover{background:var(--accSoft)}
+  .cal-d.out{visibility:hidden;pointer-events:none}
+  .cal-d.today{background:var(--accSoft);color:var(--acc);box-shadow:inset 0 0 0 1.5px var(--acc)}
+  .cal-d.sel{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;box-shadow:0 6px 14px rgba(99,102,241,.3)}
+  .cal-d.past:not(.sel):not(.today){color:#a3a8bd}
+  .dots{display:flex;gap:3px;height:6px}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--acc)}
+  .dot.ok{background:var(--ok)}
+  .dot.miss{background:var(--bad)}
+  .cal-d.sel .dot{background:#fff}
+  .cal-d.sel .dot.ok{background:#a7f3d0}
+  .cal-d.sel .dot.miss{background:#fecaca}
+  .cal-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:.78rem;color:var(--mut)}
+  .cal-legend span{display:inline-flex;align-items:center;gap:6px}
+  #calDetail{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+  #calDetail h4{margin:0 0 6px;font-size:.95rem;text-transform:capitalize}
 
   /* interruttori */
   .toggle{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:11px 0;border-top:1px solid var(--line)}
@@ -81,6 +112,9 @@
 
   .banner{display:none;background:var(--warnSoft);border:1px solid #fbd38d;color:#8a5a0b;border-radius:14px;padding:.8rem 1rem;margin-bottom:16px;align-items:center;justify-content:space-between;gap:12px}
   .note{margin:10px 0 0}
+  #installBox{display:none}
+  #installBtn{display:none}
+  #installBox ol{margin:.4rem 0 0;padding-left:1.2rem}
 
   /* overlay a schermo intero */
   #overlay{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;z-index:99;transition:background .5s;color:#fff}
@@ -96,9 +130,9 @@
 </head>
 <body>
 <header>
-  <div class="logo">💪</div>
+  <div class="logo">M</div>
   <div>
-    <h1>Motivatore</h1>
+    <h1>MUVT</h1>
     <p class="sub">Niente scuse: ti spinge finché non parti.</p>
   </div>
 </header>
@@ -108,6 +142,25 @@
 <section>
   <h2>Oggi</h2>
   <div id="today"></div>
+</section>
+
+<section>
+  <h2>Calendario</h2>
+  <div class="cal-head">
+    <h3 id="calTitle"></h3>
+    <div class="cal-nav">
+      <button id="calPrev" aria-label="Mese precedente">‹</button>
+      <button id="calToday">Oggi</button>
+      <button id="calNext" aria-label="Mese successivo">›</button>
+    </div>
+  </div>
+  <div id="calGrid"></div>
+  <div class="cal-legend">
+    <span><i class="dot"></i> in programma</span>
+    <span><i class="dot ok"></i> confermata</span>
+    <span><i class="dot miss"></i> saltata</span>
+  </div>
+  <div id="calDetail"></div>
 </section>
 
 <section>
@@ -121,6 +174,12 @@
 <section>
   <h2>Le mie routine</h2>
   <div id="list"></div>
+</section>
+
+<section id="installBox">
+  <h2>Installa MUVT</h2>
+  <div class="row"><button class="primary" id="installBtn">Installa app</button></div>
+  <div class="mut" id="installHint"></div>
 </section>
 
 <section>

@@ -1,6 +1,6 @@
 // Service worker minimale: cache offline + click sulle notifiche
-const CACHE = 'motivatore-v1';
-const FILES = ['./', 'index.html', 'app.js', 'manifest.json', 'icon.svg'];
+const CACHE = 'muvt-v2';
+const FILES = ['./', 'index.html', 'app.js', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
