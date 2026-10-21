@@ -1,4 +1,4 @@
-# MUVT
+# Motiva
 
 Notifiche a intensità crescente finché non confermi di star svolgendo la routine. Calendario mensile incluso.
 
@@ -17,12 +17,12 @@ Apri http://localhost:8000
 
 ## App Android
 
-L'APK si compila su GitHub Actions: vai su **Actions → Build APK Android → Run workflow** (parte anche a ogni push che tocca l'app). A fine build scarica l'artefatto `muvt-apk`, estrai `app-debug.apk` e installalo sul telefono (serve consentire l'installazione da fonti sconosciute).
+L'APK si compila su GitHub Actions: vai su **Actions → Build APK Android → Run workflow** (parte anche a ogni push che tocca l'app). A fine build scarica l'artefatto `motiva-apk`, estrai `app-debug.apk` e installalo sul telefono (serve consentire l'installazione da fonti sconosciute).
 
 Dopo l'installazione:
 
 1. Consenti le notifiche e gli **allarmi esatti** quando richiesto.
-2. Imposta MUVT su **Batteria → Nessuna restrizione**: alcuni produttori (Xiaomi, Huawei, Samsung…) bloccano gli allarmi delle app in background.
+2. Imposta Motiva su **Batteria → Nessuna restrizione**: alcuni produttori (Xiaomi, Huawei, Samsung…) bloccano gli allarmi delle app in background.
 3. Apri l'app almeno una volta ogni pochi giorni: gli allarmi vengono programmati per i 4 giorni successivi a ogni apertura.
 
 ### Compilare in locale

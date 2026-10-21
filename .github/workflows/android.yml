@@ -48,5 +48,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: muvt-apk
+          name: motiva-apk
           path: native/android/app/build/outputs/apk/debug/app-debug.apk

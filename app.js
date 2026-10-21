@@ -10,7 +10,7 @@ const LN = NATIVE
 const DEFAULTS = {
   routines: [],
   done: {},
-  settings: { vib: true, sound: true, msg: true, full: true, notif: true, lead: 60, grace: 30 }
+  settings: { vib: true, sound: true, msg: true, full: true, notif: true, lead: 60, grace: 30, dark: false }
 };
 
 // ---------- Livelli di escalation ----------
@@ -33,6 +33,7 @@ const MESSAGES = [
 
 // ---------- Stato ----------
 let state = load();
+applyTheme();
 const runtime = {};          // chiave occorrenza -> { level, lastFire }
 let sim = null;              // { realStart, simStart, speed, startMs, leadMin }
 let audioCtx = null;
@@ -46,6 +47,11 @@ function load() {
       settings: Object.assign({}, DEFAULTS.settings, s && s.settings)
     };
   } catch (e) { return JSON.parse(JSON.stringify(DEFAULTS)); }
+}
+function applyTheme() {
+  const dark = !!state.settings.dark;
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  document.querySelector('meta[name="theme-color"]').content = dark ? '#11131b' : '#f6f7fb';
 }
 function save() {
   try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) {}
@@ -189,6 +195,11 @@ function startSim() {
 function stopSim() { sim = null; delete runtime.sim; hideOverlay(); closeNotifications(); render(); }
 $('#sTest').addEventListener('click', () => { unlockAudio(); startSim(); });
 $('#sStop').addEventListener('click', stopSim);
+$('#settingsOpen').addEventListener('click', () => $('#settingsDialog').showModal());
+$('#settingsClose').addEventListener('click', () => $('#settingsDialog').close());
+$('#settingsDialog').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.close();
+});
 
 // ---------- UI ----------
 function renderToday() {
@@ -238,11 +249,17 @@ $('#rAdd').addEventListener('click', () => {
 // ---------- Impostazioni ----------
 const BOOLS = { sVib: 'vib', sSound: 'sound', sMsg: 'msg', sFull: 'full', sNotif: 'notif' };
 function renderSettings() {
+  $('#sDark').checked = !!state.settings.dark;
   for (const [id, k] of Object.entries(BOOLS)) $('#' + id).checked = !!state.settings[k];
   $('#sLead').value = state.settings.lead;
   $('#sGrace').value = state.settings.grace;
   updatePermBanner();
 }
+$('#sDark').addEventListener('change', e => {
+  state.settings.dark = e.currentTarget.checked;
+  applyTheme();
+  save();
+});
 for (const [id, k] of Object.entries(BOOLS)) {
   $('#' + id).addEventListener('change', e => {
     state.settings[k] = e.target.checked; save();
@@ -399,7 +416,7 @@ async function ensureChannel(level) {
   if (!channelsDone.has(id)) {
     await LN.createChannel({
       id, name: `Livello ${level + 1}${s.vib ? '' : ' (senza vibrazione)'}${s.sound ? '' : ' (silenzioso)'}`,
-      description: 'Notifiche a intensità crescente di MUVT',
+      description: 'Notifiche a intensità crescente di Motiva',
       importance: IMPORTANCE[level], visibility: 1, lights: true, vibration: !!s.vib,
       sound: s.sound ? `muvt_l${level + 1}.wav` : 'muvt_silent.wav'
     });
@@ -462,7 +479,7 @@ async function nativeReschedule() {
       await LN.schedule({ notifications: notifications.slice(i, i + 100) });
     }
   } catch (e) {
-    console.warn('MUVT: programmazione notifiche non riuscita', e);
+    console.warn('Motiva: programmazione notifiche non riuscita', e);
   } finally {
     nativeBusy = false;
     if (nativeAgain) { nativeAgain = false; nativeReschedule(); }

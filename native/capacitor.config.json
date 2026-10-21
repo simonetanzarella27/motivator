@@ -1,6 +1,6 @@
 {
   "appId": "it.muvt.app",
-  "appName": "MUVT",
+  "appName": "Motiva",
   "webDir": "www",
   "android": { "allowMixedContent": false },
   "plugins": {

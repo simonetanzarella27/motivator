@@ -1,5 +1,5 @@
 // Service worker minimale: cache offline + click sulle notifiche
-const CACHE = 'muvt-v2';
+const CACHE = 'motiva-v3';
 const FILES = ['./', 'index.html', 'app.js', 'manifest.json', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

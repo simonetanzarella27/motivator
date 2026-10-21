@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "MUVT",
-  "short_name": "MUVT",
+  "name": "Motiva",
+  "short_name": "Motiva",
   "description": "Notifiche a intensità crescente finché non parti.",
   "lang": "it",
   "start_url": "./",

@@ -2,7 +2,7 @@
   "name": "muvt-native",
   "version": "1.0.0",
   "private": true,
-  "description": "Wrapper Android (Capacitor) di MUVT",
+  "description": "Wrapper Android (Capacitor) di Motiva",
   "scripts": {
     "copy-web": "node scripts/copy-web.js",
     "sync": "npm run copy-web && cap sync android"
