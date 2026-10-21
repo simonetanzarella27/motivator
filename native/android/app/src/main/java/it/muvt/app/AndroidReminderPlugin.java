@@ -134,21 +134,54 @@ public class AndroidReminderPlugin extends Plugin {
             return;
         }
 
+        Context context = getContext();
+        android.content.SharedPreferences preferences =
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        String oldReminders = preferences.getString(REMINDERS, "[]");
+        JSONArray stored;
         try {
-            cancelStoredReminders();
-            JSONArray stored = new JSONArray();
+            stored = new JSONArray(oldReminders);
             for (int i = 0; i < reminders.length(); i++) {
-                JSONObject reminder = reminders.getJSONObject(i);
-                stored.put(reminder);
+                JSONObject incoming = reminders.getJSONObject(i);
+                int incomingId = incoming.getInt("id");
+                boolean replaced = false;
+                for (int j = 0; j < stored.length(); j++) {
+                    if (stored.getJSONObject(j).getInt("id") == incomingId) {
+                        stored.put(j, incoming);
+                        replaced = true;
+                        break;
+                    }
+                }
+                if (!replaced) stored.put(incoming);
             }
-            getContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .edit().putString(REMINDERS, stored.toString()).apply();
-            for (int i = 0; i < stored.length(); i++) {
-                scheduleReminder(getContext(), stored.getJSONObject(i));
+            preferences.edit().putString(REMINDERS, stored.toString()).commit();
+            for (int i = 0; i < reminders.length(); i++) {
+                scheduleReminder(context, reminders.getJSONObject(i));
             }
             call.resolve();
         } catch (JSONException | SecurityException | IllegalStateException e) {
-            cancelStoredReminders();
+            try {
+                JSONArray old = new JSONArray(oldReminders);
+                for (int i = 0; i < reminders.length(); i++) {
+                    JSONObject incoming = reminders.getJSONObject(i);
+                    boolean existed = false;
+                    for (int j = 0; j < old.length(); j++) {
+                        if (old.getJSONObject(j).getInt("id") == incoming.getInt("id")) {
+                            existed = true;
+                            break;
+                        }
+                    }
+                    if (!existed) {
+                        PendingIntent pending = FullScreenReminderReceiver.pendingIntent(context, incoming);
+                        AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                        if (alarms != null) alarms.cancel(pending);
+                        pending.cancel();
+                    }
+                }
+                preferences.edit().putString(REMINDERS, oldReminders).commit();
+            } catch (JSONException rollbackError) {
+                Log.e("Motiva", "Ripristino degli allarmi full-screen non riuscito", rollbackError);
+            }
             call.reject("Impossibile programmare le notifiche a schermo intero", e);
         }
     }

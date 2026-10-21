@@ -13,7 +13,7 @@ const NV = NATIVE
 const DEFAULTS = {
   routines: [],
   done: {},
-  settings: { vib: true, sound: true, msg: true, full: true, notif: true, lead: 60, grace: 30, dark: false }
+  settings: { vib: true, sound: true, msg: true, full: true, notif: true, lead: 60, grace: 30, frequency: 3, dark: false }
 };
 
 // ---------- Livelli di escalation ----------
@@ -25,6 +25,11 @@ const LEVELS = [
   { frac: 0.17, every:  2 * 60, vol: 0.65, freq: 740, beeps: 4, vib: [500, 100, 500, 100, 500],    color: '#ea580c', fullscreen: true },
   { frac: 0.00, every:     30,  vol: 1.00, freq: 880, beeps: 6, vib: [800, 100, 800, 100, 800, 100, 800], color: '#dc2626', fullscreen: true }
 ];
+const FREQUENCY_FACTORS = [2, 1.5, 1, 0.75, 0.5];
+const notificationInterval = level => {
+  const frequencyIndex = Math.max(0, Math.min(4, (Number(state.settings.frequency) || 3) - 1));
+  return LEVELS[level].every * 1000 * FREQUENCY_FACTORS[frequencyIndex];
+};
 
 const MESSAGES = [
   n => `Tra poco: ${n}. Inizia a prepararti con calma.`,
@@ -40,6 +45,7 @@ applyTheme();
 const runtime = {};          // chiave occorrenza -> { level, lastFire }
 let sim = null;              // { realStart, simStart, speed, startMs, leadMin }
 let audioCtx = null;
+let nativeReminderLaunch = null;
 
 function load() {
   try {
@@ -96,7 +102,7 @@ function tick() {
     LEVELS.forEach((L, i) => { if (minsBefore <= L.frac * lead) level = i; });
 
     const rt = runtime[o.key] || (runtime[o.key] = { level: -1, lastFire: 0 });
-    const every = LEVELS[level].every * 1000;
+    const every = notificationInterval(level);
     if (level !== rt.level || nowMs - rt.lastFire >= every) {
       rt.level = level; rt.lastFire = nowMs;
       fire(o, level, minsBefore);
@@ -104,6 +110,18 @@ function tick() {
     if (LEVELS[level].fullscreen && s.full && level > overlayLevel) { overlayOcc = o; overlayLevel = level; }
   }
 
+  if (nativeReminderLaunch) {
+    if (state.done[nativeReminderLaunch.key] || Date.now() >= nativeReminderLaunch.expiresAt) {
+      nativeReminderLaunch = null;
+    } else {
+      overlayOcc = {
+        key: nativeReminderLaunch.key,
+        name: nativeReminderLaunch.name,
+        startMs: nativeReminderLaunch.startAt
+      };
+      overlayLevel = Math.max(0, Math.min(LEVELS.length - 1, nativeReminderLaunch.level));
+    }
+  }
   if (overlayOcc) showOverlay(overlayOcc, overlayLevel, (overlayOcc.startMs - nowMs) / 60000);
   else hideOverlay();
 
@@ -184,6 +202,11 @@ function hideOverlay() { $('#overlay').classList.remove('show'); currentOverlayK
 // ---------- Conferma ----------
 function confirmKey(key) {
   if (key === 'sim') { stopSim(); return; }
+  if (nativeReminderLaunch && nativeReminderLaunch.key === key) {
+    const isTestReminder = key.startsWith('test|');
+    nativeReminderLaunch = null;
+    if (isTestReminder) { hideOverlay(); return; }
+  }
   state.done[key] = Date.now(); save();
   hideOverlay(); closeNotifications(); render();
 }
@@ -297,11 +320,15 @@ $('#rDays').addEventListener('change', () => { $('#rError').hidden = true; });
 
 // ---------- Impostazioni ----------
 const BOOLS = { sVib: 'vib', sSound: 'sound', sMsg: 'msg', sFull: 'full', sNotif: 'notif' };
+const FREQUENCY_LABELS = ['Molto bassa', 'Bassa', 'Normale', 'Alta', 'Molto alta'];
 function renderSettings() {
   $('#sDark').checked = !!state.settings.dark;
   for (const [id, k] of Object.entries(BOOLS)) $('#' + id).checked = !!state.settings[k];
   $('#sLead').value = state.settings.lead;
   $('#sGrace').value = state.settings.grace;
+  $('#sFrequency').value = state.settings.frequency;
+  $('#sFrequencyValue').textContent = FREQUENCY_LABELS[state.settings.frequency - 1] || 'Normale';
+  $('#nativeTestTools').hidden = !NATIVE;
   updatePermBanner();
 }
 $('#sDark').addEventListener('change', e => {
@@ -319,6 +346,12 @@ for (const [id, k] of Object.entries(BOOLS)) {
 }
 $('#sLead').addEventListener('change', e => { state.settings.lead = Math.max(5, Number(e.target.value) || 60); save(); });
 $('#sGrace').addEventListener('change', e => { state.settings.grace = Math.max(0, Number(e.target.value) || 30); save(); });
+$('#sFrequency').addEventListener('input', e => {
+  const frequency = Math.max(1, Math.min(5, Number(e.target.value) || 3));
+  state.settings.frequency = frequency;
+  $('#sFrequencyValue').textContent = FREQUENCY_LABELS[frequency - 1];
+});
+$('#sFrequency').addEventListener('change', save);
 
 function updatePermBanner() {
   if (NATIVE) { nativeBanner(); return; }
@@ -453,7 +486,10 @@ function planOccurrence(startMs, lead, grace) {
     for (let t = from; t < to;) {
       out.push({ at: Math.round(t), level: i });
       // ultimo livello: ogni 30 s per 10 minuti, poi ogni 2 minuti (per non superare il limite di allarmi)
-      t += (i === last && t - from >= 10 * 60000) ? 120000 : LEVELS[i].every * 1000;
+      const interval = notificationInterval(i);
+      t += (i === last && t - from >= 10 * 60000)
+        ? Math.round(120000 * interval / (LEVELS[i].every * 1000))
+        : interval;
     }
   }
   return out;
@@ -461,7 +497,7 @@ function planOccurrence(startMs, lead, grace) {
 
 async function ensureChannel(level) {
   const s = state.settings;
-  const id = `motiva_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}_h3`;
+  const id = `motiva_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}_h4`;
   if (!channelsDone.has(id)) {
     await LN.createChannel({
       id, name: `Livello ${level + 1}${s.vib ? '' : ' (senza vibrazione)'}${s.sound ? '' : ' (silenzioso)'}`,
@@ -647,6 +683,8 @@ async function nativeInit() {
   nativeBanner();
   nativeReschedule();
   nativeLaunchReminder();
+  $('#sTestNotification').addEventListener('click', nativeTestNotification);
+  $('#sTestFullscreen').addEventListener('click', nativeTestFullscreen);
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) { nativeBanner(); nativeReschedule(); nativeLaunchReminder(); tick(); }
   });
@@ -657,13 +695,103 @@ async function nativeLaunchReminder() {
     const result = await NV.takePendingFullScreenReminder();
     const reminder = result.reminder;
     if (!reminder || !reminder.key || state.done[reminder.key]) return;
+    nativeReminderLaunch = {
+      ...reminder,
+      expiresAt: reminder.key.startsWith('test|') ? Date.now() + 60_000 : Infinity
+    };
     showOverlay(
       { key: reminder.key, name: reminder.name },
       Math.max(0, Math.min(LEVELS.length - 1, reminder.level)),
       (reminder.startAt - Date.now()) / 60000
     );
+    tick();
   } catch (e) {
     console.warn('Motiva: apertura del promemoria full-screen non riuscita', e);
+  }
+}
+
+function nativeTestResult(message, error = false) {
+  const result = $('#nativeTestResult');
+  result.textContent = message;
+  result.classList.toggle('test-error', error);
+  result.hidden = false;
+}
+
+async function nativeTestNotification() {
+  const result = $('#nativeTestResult');
+  result.hidden = false;
+  result.classList.remove('test-error');
+  result.textContent = 'Programmo la notifica di prova…';
+  try {
+    if (!state.settings.notif) {
+      nativeTestResult('Attiva prima “Notifiche di sistema” nelle impostazioni di Motiva.', true);
+      return;
+    }
+    const permission = await LN.checkPermissions();
+    if (permission.display !== 'granted') {
+      nativeTestResult('Le notifiche Android non sono autorizzate. Tocca “Attivale” nel riquadro in alto e riprova.', true);
+      return;
+    }
+    const exact = (await nativePermState()).exact === 'granted';
+    const id = hash32('motiva-test-' + Date.now());
+    const channelId = await ensureChannel(4);
+    const scheduled = await LN.schedule({
+      notifications: [{
+        id,
+        title: 'Motiva · prova notifiche',
+        body: 'Se vedi questo avviso, le notifiche di sistema sono attive.',
+        channelId,
+        smallIcon: 'ic_stat_muvt',
+        iconColor: '#6366F1',
+        isExactNotification: exact,
+        isExactMandatory: false,
+        schedule: { at: new Date(Date.now() + 5000), allowWhileIdle: true }
+      }]
+    });
+    const warning = scheduled.warning ? ' Android potrebbe consegnarla in ritardo: gli allarmi esatti non sono attivi.' : '';
+    nativeTestResult(`Notifica programmata tra 5 secondi.${warning} Suono: ${state.settings.sound ? 'attivo' : 'disattivato'}; vibrazione: ${state.settings.vib ? 'attiva' : 'disattivata'}. Se non arriva, controlla il canale “Livello 5” nelle impostazioni Android di Motiva.`);
+  } catch (e) {
+    console.warn('Motiva: test notifica Android non riuscito', e);
+    nativeTestResult(`Test non riuscito: ${e.message || 'controlla i permessi Android delle notifiche.'}`, true);
+  }
+}
+
+async function nativeTestFullscreen() {
+  if (!state.settings.notif) {
+    nativeTestResult('Attiva prima “Notifiche di sistema” nelle impostazioni di Motiva.', true);
+    return;
+  }
+  nativeTestResult('Programmo la prova a schermo intero…');
+  try {
+    const permission = await LN.checkPermissions();
+    if (permission.display !== 'granted') {
+      nativeTestResult('Prima autorizza le notifiche Android dal riquadro in alto.', true);
+      return;
+    }
+    const status = await NV.getStatus();
+    if (!status.exactAlarmsAllowed) {
+      nativeTestResult('Per provare l’apertura a schermo intero, autorizza prima “Allarmi e promemoria” dal riquadro in alto.', true);
+      return;
+    }
+    if (!status.fullScreenIntentAllowed) {
+      nativeTestResult('Android non ha autorizzato gli intent a schermo intero. Attivali nelle impostazioni notifiche di Motiva e riprova.', true);
+      return;
+    }
+    const id = hash32('motiva-fullscreen-test-' + Date.now());
+    const at = Date.now() + 5000;
+    const channelId = await ensureChannel(4);
+    await NV.scheduleFullScreen({
+      notifications: [{
+        id, at, level: 4, key: `test|${id}`, name: 'Prova schermo intero',
+        startAt: at, channelId, title: 'Motiva · prova schermo intero',
+        body: 'Motiva dovrebbe aprirsi ora.',
+        vibration: state.settings.vib ? LEVELS[4].vib : []
+      }]
+    });
+    nativeTestResult('Prova programmata tra 5 secondi: lascia Motiva in background o blocca lo schermo. Se Android blocca l’apertura, dovrebbe comunque apparire una notifica.');
+  } catch (e) {
+    console.warn('Motiva: test full-screen Android non riuscito', e);
+    nativeTestResult(`Prova non riuscita: ${e.message || 'controlla i permessi degli allarmi e dello schermo intero.'}`, true);
   }
 }
 

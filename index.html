@@ -69,6 +69,9 @@
   .row > label{flex:1;min-width:140px}
   .form-error{margin:.2rem 0 .6rem;padding:.65rem .8rem;border:1px solid var(--bad);border-radius:12px;background:var(--badSoft);color:var(--bad);font-size:.88rem}
   .form-error[hidden]{display:none}
+  .mut.test-error{color:var(--bad)}
+  #nativeTestTools[hidden]{display:none}
+  input[type=range]{width:100%;accent-color:var(--acc);margin:.45rem 0}
 
   /* giorni come chip */
   .days{gap:6px}
@@ -226,7 +229,18 @@
     <label class="mut">Anticipo prima notifica (min)<input type="number" id="sLead" min="5" max="240"></label>
     <label class="mut">Tolleranza dopo l'orario (min)<input type="number" id="sGrace" min="0" max="120"></label>
   </div>
+  <div class="row">
+    <label class="mut" for="sFrequency">Frequenza notifiche · <strong id="sFrequencyValue">Normale</strong>
+      <input type="range" id="sFrequency" min="1" max="5" step="1" value="3" aria-label="Frequenza delle notifiche">
+      <span class="mut">Meno frequenti</span> <span class="mut" style="float:right">Più frequenti</span>
+    </label>
+  </div>
   <div class="row"><button id="sTest">▶ Simula escalation</button><button id="sStop" class="danger">Ferma</button></div>
+  <div class="row" id="nativeTestTools" hidden>
+    <button type="button" id="sTestNotification">Prova notifica, suono e vibrazione</button>
+    <button type="button" id="sTestFullscreen">Prova schermo intero</button>
+  </div>
+  <p class="mut note" id="nativeTestResult" role="status" aria-live="polite" hidden></p>
   <p class="mut note" id="settingsNote">La simulazione va 60 volte più veloce. L'app deve restare aperta (anche in background) per far scattare le notifiche. Il primo tocco sulla pagina sblocca l'audio.</p>
 </dialog>
 
@@ -237,6 +251,6 @@
   <button id="ovBtn">✅ Sto andando!</button>
 </div>
 
-<script src="app.js?v=motiva-v6"></script>
+<script src="app.js?v=motiva-v7"></script>
 </body>
 </html>

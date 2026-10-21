@@ -38,6 +38,7 @@ jobs:
         working-directory: native
         run: |
           npm ci
+          node --check ../app.js
           npm run sync
 
       - name: Compila l'APK

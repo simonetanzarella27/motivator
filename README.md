@@ -7,6 +7,8 @@ Due versioni, stesso codice:
 - **Web / PWA** (cartella radice): si apre da browser, ad esempio con GitHub Pages. Le notifiche scattano solo se la pagina resta aperta.
 - **App Android** (cartella `native/`): allarmi programmati dal sistema, che arrivano anche con l'app chiusa.
 
+Nelle impostazioni si può regolare la frequenza degli avvisi (da molto bassa a molto alta); per diagnosticare l'app Android sono disponibili anche prove separate di notifica/vibrazione e apertura a schermo intero.
+
 ## Avvio web in locale
 
 ```
