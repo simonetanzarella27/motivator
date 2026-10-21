@@ -228,7 +228,8 @@ settingsDialog.addEventListener('click', e => {
   if (e.target === settingsDialog) closeSettings();
 });
 document.addEventListener('click', e => {
-  if (settingsDialog.classList.contains('settings-fallback') && !settingsDialog.contains(e.target)) closeSettings();
+  if (settingsDialog.classList.contains('settings-fallback')
+      && !settingsDialog.contains(e.target) && !settingsButton.contains(e.target)) closeSettings();
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && settingsDialog.classList.contains('settings-fallback')) closeSettings();
