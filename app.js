@@ -7,7 +7,7 @@ const LN = NATIVE
   ? ((window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) || window.Capacitor.registerPlugin('LocalNotifications'))
   : null;
 const NV = NATIVE
-  ? ((window.Capacitor.Plugins && window.Capacitor.Plugins.NotificationChannelVibration) || window.Capacitor.registerPlugin('NotificationChannelVibration'))
+  ? ((window.Capacitor.Plugins && window.Capacitor.Plugins.AndroidReminder) || window.Capacitor.registerPlugin('AndroidReminder'))
   : null;
 
 const DEFAULTS = {
@@ -449,7 +449,7 @@ function planOccurrence(startMs, lead, grace) {
 
 async function ensureChannel(level) {
   const s = state.settings;
-  const id = `motiva_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}_h1`;
+  const id = `motiva_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}_h2`;
   if (!channelsDone.has(id)) {
     await LN.createChannel({
       id, name: `Livello ${level + 1}${s.vib ? '' : ' (senza vibrazione)'}${s.sound ? '' : ' (silenzioso)'}`,
@@ -473,6 +473,7 @@ async function nativeReschedule() {
   if (nativeBusy) { nativeAgain = true; return; }
   nativeBusy = true;
   try {
+    await NV.cancelFullScreen();
     const pending = await LN.getPending();
     if (pending.notifications && pending.notifications.length) {
       await LN.cancel({ notifications: pending.notifications.map(n => ({ id: n.id })) });
@@ -492,34 +493,50 @@ async function nativeReschedule() {
         const [h, m] = r.time.split(':').map(Number);
         const start = new Date(day); start.setHours(h, m, 0, 0);
         for (const p of planOccurrence(start.getTime(), s.lead, s.grace)) {
-          if (p.at > now + 3000) list.push({ at: p.at, level: p.level, key, name: r.name });
+          if (p.at > now + 3000) list.push({ at: p.at, level: p.level, key, name: r.name, startAt: start.getTime() });
         }
       }
     }
     list.sort((a, b) => a.at - b.at);
     list.length = Math.min(list.length, MAX_ALARMS);
 
-    const used = new Set(), notifications = [];
+    const status = await NV.getStatus();
+    const useFullScreen = s.full && status.fullScreenIntentAllowed;
+    const used = new Set(), notifications = [], fullScreenNotifications = [];
     for (const it of list) {
       let id = hash32(it.key + '#' + it.at);
       while (used.has(id)) id = (id + 1) & 0x7fffffff;
       used.add(id);
-      notifications.push({
+      const channelId = await ensureChannel(it.level);
+      const notification = {
         id,
         title: `${it.name} · livello ${it.level + 1}/5`,
         body: messageFor(it.name, it.level),
         isExactNotification: true,
         isExactMandatory: true,
-        channelId: await ensureChannel(it.level),
+        channelId,
         smallIcon: 'ic_stat_muvt', iconColor: '#6366F1',
         group: 'muvt-' + it.key, autoCancel: true,
         schedule: { at: new Date(it.at), allowWhileIdle: true },
         extra: { key: it.key }
-      });
+      };
+      if (useFullScreen && it.level >= 3) {
+        fullScreenNotifications.push({
+          id, at: it.at, level: it.level, key: it.key, name: it.name,
+          startAt: it.startAt, channelId,
+          title: notification.title, body: notification.body,
+          vibration: s.vib ? LEVELS[it.level].vib : []
+        });
+      } else {
+        notifications.push(notification);
+      }
     }
     for (let i = 0; i < notifications.length; i += 100) {
       const result = await LN.schedule({ notifications: notifications.slice(i, i + 100) });
       if (result.warning) throw new Error(result.warning.message);
+    }
+    if (fullScreenNotifications.length) {
+      await NV.scheduleFullScreen({ notifications: fullScreenNotifications });
     }
   } catch (e) {
     console.warn('Motiva: programmazione notifiche non riuscita', e);
@@ -535,18 +552,23 @@ async function nativeReschedule() {
 async function nativePermState() {
   const p = await LN.checkPermissions();
   let exact = 'granted';
-  try { exact = (await LN.checkExactNotificationSetting()).exact_alarm; } catch (e) {}
+  exact = (await LN.checkExactNotificationSetting()).exact_alarm;
   return { display: p.display, exact };
 }
 async function nativeBanner() {
   const box = $('#permBanner');
   try {
-    const p = await nativePermState();
+    const [p, status] = await Promise.all([nativePermState(), NV.getStatus()]);
     const msg = p.display !== 'granted'
       ? 'Le notifiche sono disattivate: senza non posso svegliarti.'
       : p.exact !== 'granted' ? 'Consenti gli allarmi esatti, altrimenti le notifiche possono arrivare in ritardo.' : '';
-    box.querySelector('span').textContent = msg;
-    box.style.display = msg && state.settings.notif ? 'flex' : 'none';
+    const permissionMessage = msg || (state.settings.full && !status.fullScreenIntentAllowed
+      ? 'Consenti le notifiche a schermo intero per aprire Motiva nelle fasi finali.'
+      : !status.batteryOptimizationIgnored
+        ? 'Consenti a Motiva di funzionare in background per ridurre i ritardi delle notifiche.'
+        : '');
+    box.querySelector('span').textContent = permissionMessage;
+    box.style.display = permissionMessage && state.settings.notif ? 'flex' : 'none';
   } catch (e) {
     console.warn('Motiva: verifica dei permessi notifiche non riuscita', e);
     box.querySelector('span').textContent = 'Impossibile verificare i permessi delle notifiche.';
@@ -556,9 +578,18 @@ async function nativeBanner() {
 async function nativeAsk() {
   try {
     const p = await nativePermState();
-    if (p.display !== 'granted') await LN.requestPermissions();
-    const exact = await LN.checkExactNotificationSetting();
-    if (exact.exact_alarm !== 'granted') await LN.changeExactNotificationSetting();
+    if (p.display !== 'granted') {
+      await LN.requestPermissions();
+    } else if (p.exact !== 'granted') {
+      await LN.changeExactNotificationSetting();
+    } else {
+      const status = await NV.getStatus();
+      if (state.settings.full && !status.fullScreenIntentAllowed) {
+        await NV.requestFullScreenIntentAccess();
+      } else if (!status.batteryOptimizationIgnored) {
+        await NV.requestBackgroundAccess();
+      }
+    }
   } catch (e) {
     console.warn('Motiva: richiesta dei permessi notifiche non riuscita', e);
   }
@@ -573,16 +604,32 @@ async function nativeInit() {
   }
   nativeBanner();
   nativeReschedule();
+  nativeLaunchReminder();
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) { nativeBanner(); nativeReschedule(); tick(); }
+    if (!document.hidden) { nativeBanner(); nativeReschedule(); nativeLaunchReminder(); tick(); }
   });
+}
+
+async function nativeLaunchReminder() {
+  try {
+    const result = await NV.takePendingFullScreenReminder();
+    const reminder = result.reminder;
+    if (!reminder || !reminder.key || state.done[reminder.key]) return;
+    showOverlay(
+      { key: reminder.key, name: reminder.name },
+      Math.max(0, Math.min(LEVELS.length - 1, reminder.level)),
+      (reminder.startAt - Date.now()) / 60000
+    );
+  } catch (e) {
+    console.warn('Motiva: apertura del promemoria full-screen non riuscita', e);
+  }
 }
 
 // ---------- Avvio ----------
 if ('serviceWorker' in navigator && !NATIVE) navigator.serviceWorker.register('sw.js').catch(() => {});
 if (NATIVE) {
   const note = $('#settingsNote');
-  if (note) note.textContent = 'Le notifiche sono programmate dal sistema Android e arrivano anche con l\'app chiusa. La simulazione va 60 volte più veloce.';
+  if (note) note.textContent = 'Le notifiche sono programmate da Android e arrivano anche con l’app chiusa. Nelle fasi finali Motiva può aprirsi a schermo intero se autorizzata. La simulazione va 60 volte più veloce.';
 }
 render();
 setInterval(tick, 1000);

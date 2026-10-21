@@ -22,9 +22,12 @@ L'APK si compila su GitHub Actions: vai su **Actions → Build APK Android → R
 Dopo l'installazione:
 
 1. Consenti le notifiche e gli **allarmi esatti** quando richiesto. Motiva programma gli avvisi sul sistema Android, quindi arrivano anche con l'app chiusa; senza questi permessi gli orari non possono essere garantiti.
-2. Imposta Motiva su **Batteria → Nessuna restrizione**: alcuni produttori (Xiaomi, Huawei, Samsung…) bloccano gli allarmi delle app in background.
-3. Apri l'app almeno una volta ogni pochi giorni: gli allarmi vengono programmati per i 4 giorni successivi a ogni apertura.
-4. Nelle impostazioni Android di Motiva, lascia attiva la vibrazione dei canali di notifica: ogni livello usa un pattern progressivamente più intenso.
+2. Tocca **Attiva permessi** nell'avviso di Motiva per autorizzare l'attività in background. Android può chiedere anche l'esenzione dall'ottimizzazione batteria; sui dispositivi Android 14+ può essere necessario autorizzare separatamente gli intent a schermo intero.
+3. Se il produttore continua a limitare l'app, imposta Motiva su **Batteria → Nessuna restrizione**: alcuni produttori (Xiaomi, Huawei, Samsung…) applicano restrizioni aggiuntive.
+4. Apri l'app almeno una volta ogni pochi giorni: gli allarmi vengono programmati per i 4 giorni successivi a ogni apertura.
+5. Nelle impostazioni Android di Motiva, lascia attiva la vibrazione dei canali di notifica: ogni livello usa un pattern progressivamente più intenso.
+
+Le notifiche sono allarmi locali memorizzati sul telefono e funzionano anche senza connessione. Gli intent a schermo intero sono soggetti alle autorizzazioni e alle restrizioni di Android; se non concessi, Motiva mostra una normale notifica. Le notifiche push remote da un server richiedono invece un backend e la relativa configurazione Firebase, non presente in questo progetto.
 
 ### Compilare in locale
 
