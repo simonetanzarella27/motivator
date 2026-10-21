@@ -350,8 +350,8 @@ $('#sFrequency').addEventListener('input', e => {
   const frequency = Math.max(1, Math.min(5, Number(e.target.value) || 3));
   state.settings.frequency = frequency;
   $('#sFrequencyValue').textContent = FREQUENCY_LABELS[frequency - 1];
+  save();
 });
-$('#sFrequency').addEventListener('change', save);
 
 function updatePermBanner() {
   if (NATIVE) { nativeBanner(); return; }
@@ -527,7 +527,14 @@ async function nativeReschedule() {
       await LN.cancel({ notifications: pending.notifications.map(n => ({ id: n.id })) });
     }
     const perm = await LN.checkPermissions();
-    if (perm.display !== 'granted' || !state.settings.notif) return;
+    if (!state.settings.notif) {
+      nativeScheduleStatus('Notifiche Android disattivate nelle impostazioni di Motiva.');
+      return;
+    }
+    if (perm.display !== 'granted') {
+      nativeScheduleStatus('Pianificazione sospesa: autorizza le notifiche Android.');
+      return;
+    }
     let exactAllowed = false;
     try {
       exactAllowed = (await LN.checkExactNotificationSetting()).exact_alarm === 'granted';
@@ -612,15 +619,40 @@ async function nativeReschedule() {
         }
       }
     }
+    const next = list[0];
+    const capacityNote = list.length >= MAX_ALARMS
+      ? ` Limite di ${MAX_ALARMS} avvisi raggiunto: alcuni avvisi più lontani non sono inclusi.`
+      : '';
+    const exactNote = exactAllowed
+      ? ' Allarmi esatti autorizzati.'
+      : ' Allarmi esatti non autorizzati: Android può ritardare gli avvisi.';
+    const fullScreenNote = !s.full
+      ? ' Apertura automatica disattivata nelle impostazioni.'
+      : useFullScreen
+        ? ` Fasi finali con apertura richiesta (${fullScreenNotifications.length} allarmi).`
+        : ' Apertura non programmata: manca il permesso allarmi esatti o full-screen.';
+    nativeScheduleStatus(
+      next
+        ? `${list.length} avvisi programmati. Prossimo: ${new Date(next.at).toLocaleString()}. Frequenza: ${FREQUENCY_LABELS[s.frequency - 1] || 'Normale'}.${exactNote}${fullScreenNote}${capacityNote}`
+        : 'Nessun avviso futuro nei prossimi 4 giorni: controlla giorni, orario e anticipo della routine.'
+    );
   } catch (e) {
     console.warn('Motiva: programmazione notifiche non riuscita', e);
     const box = $('#permBanner');
     box.querySelector('span').textContent = 'Non sono riuscita a programmare le notifiche. Riapri l’app e controlla i permessi.';
     box.style.display = state.settings.notif ? 'flex' : 'none';
+    nativeScheduleStatus(`Errore di pianificazione: ${e.message || 'errore Android non specificato'}`, true);
   } finally {
     nativeBusy = false;
     if (nativeAgain) { nativeAgain = false; nativeReschedule(); }
   }
+}
+
+function nativeScheduleStatus(message, error = false) {
+  const status = $('#nativeScheduleStatus');
+  status.hidden = false;
+  status.textContent = message;
+  status.classList.toggle('test-error', error);
 }
 
 async function nativePermState() {
@@ -788,7 +820,7 @@ async function nativeTestFullscreen() {
         vibration: state.settings.vib ? LEVELS[4].vib : []
       }]
     });
-    nativeTestResult('Prova programmata tra 5 secondi: lascia Motiva in background o blocca lo schermo. Se Android blocca l’apertura, dovrebbe comunque apparire una notifica.');
+    nativeTestResult('Prova programmata tra 5 secondi: blocca lo schermo. Con schermo acceso Android può mostrare solo una notifica/banner invece di aprire l’app.');
   } catch (e) {
     console.warn('Motiva: test full-screen Android non riuscito', e);
     nativeTestResult(`Prova non riuscita: ${e.message || 'controlla i permessi degli allarmi e dello schermo intero.'}`, true);
@@ -799,7 +831,8 @@ async function nativeTestFullscreen() {
 if ('serviceWorker' in navigator && !NATIVE) navigator.serviceWorker.register('sw.js').catch(() => {});
 if (NATIVE) {
   const note = $('#settingsNote');
-  if (note) note.textContent = 'Le notifiche sono programmate da Android e arrivano anche con l’app chiusa. Nelle fasi finali Motiva può aprirsi a schermo intero se autorizzata. La simulazione va 60 volte più veloce.';
+  if (note) note.textContent = 'Le notifiche sono programmate da Android anche con l’app chiusa. La frequenza richiesta è mostrata nello stato qui sopra; Android può ritardare gli allarmi ravvicinati. Per testare lo schermo intero, blocca il telefono: con lo schermo acceso Android può mostrare solo un banner.';
+  $('#nativeScheduleStatus').hidden = false;
 }
 render();
 setInterval(tick, 1000);

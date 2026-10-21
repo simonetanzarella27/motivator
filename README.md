@@ -7,7 +7,7 @@ Due versioni, stesso codice:
 - **Web / PWA** (cartella radice): si apre da browser, ad esempio con GitHub Pages. Le notifiche scattano solo se la pagina resta aperta.
 - **App Android** (cartella `native/`): allarmi programmati dal sistema, che arrivano anche con l'app chiusa.
 
-Nelle impostazioni si può regolare la frequenza degli avvisi (da molto bassa a molto alta); per diagnosticare l'app Android sono disponibili anche prove separate di notifica/vibrazione e apertura a schermo intero.
+Nelle impostazioni si può regolare la frequenza degli avvisi (da molto bassa a molto alta); per diagnosticare l'app Android sono disponibili anche prove separate di notifica/vibrazione e apertura a schermo intero, oltre allo stato degli avvisi programmati.
 
 ## Avvio web in locale
 
@@ -29,7 +29,7 @@ Dopo l'installazione:
 4. Apri l'app almeno una volta ogni pochi giorni: gli allarmi vengono programmati per i 4 giorni successivi a ogni apertura.
 5. Nelle impostazioni Android di Motiva, lascia attiva la vibrazione dei canali di notifica: ogni livello usa un pattern progressivamente più intenso.
 
-Le notifiche sono allarmi locali memorizzati sul telefono e funzionano anche senza connessione. Gli intent a schermo intero sono soggetti alle autorizzazioni e alle restrizioni di Android; se non concessi, Motiva mostra una normale notifica. Le notifiche push remote da un server richiedono invece un backend e la relativa configurazione Firebase, non presente in questo progetto.
+Le notifiche sono allarmi locali memorizzati sul telefono e funzionano anche senza connessione. Gli intent a schermo intero sono soggetti alle autorizzazioni e alle restrizioni di Android; Android può mostrare soltanto un banner quando lo schermo è acceso, e aprire Motiva solo quando il sistema consente l'intent (tipicamente a schermo spento/bloccato). Se non concessi, Motiva mostra una normale notifica. La frequenza selezionata imposta gli intervalli richiesti, ma Android può ritardare gli allarmi ravvicinati mentre il dispositivo è in modalità Doze. Le notifiche push remote da un server richiedono invece un backend e la relativa configurazione Firebase, non presente in questo progetto.
 
 ### Compilare in locale
 
