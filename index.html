@@ -141,14 +141,30 @@
   #installBtn{display:none}
   #installBox ol{margin:.4rem 0 0;padding-left:1.2rem}
 
-  /* overlay a schermo intero */
-  #overlay{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;z-index:99;transition:background .5s;color:#fff}
-  #overlay.show{display:flex}
-  #ovTitle{font-size:.95rem;font-weight:600;opacity:.85;margin-bottom:.5rem;letter-spacing:.04em;text-transform:uppercase}
-  #ovMsg{font-size:clamp(1.7rem,6.5vw,2.8rem);font-weight:800;line-height:1.15;margin:.5rem 0 1rem;letter-spacing:-.02em;max-width:18ch}
-  #ovCount{font-size:1.2rem;margin-bottom:2rem;font-variant-numeric:tabular-nums;opacity:.95}
-  #ovBtn{font-size:1.25rem;padding:1rem 2.2rem;background:#fff;color:#1f2437;font-weight:800;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-  #ovBtn:hover{background:#fff}
+  /* Overlay a schermo intero */
+  #overlay{--level-color:#dc2626;position:fixed;inset:0;display:none;justify-content:center;align-items:center;overflow-y:auto;overscroll-behavior:contain;padding:max(22px,env(safe-area-inset-top)) 20px max(22px,env(safe-area-inset-bottom));z-index:99;color:#fff;background:radial-gradient(ellipse at 50% 0%,color-mix(in srgb,var(--level-color) 72%,#fff 8%),transparent 58%),linear-gradient(155deg,#171b2b 0%,#11131b 70%);isolation:isolate}
+  #overlay::before,#overlay::after{content:"";position:absolute;z-index:-1;border:1px solid rgba(255,255,255,.08);border-radius:50%;width:min(90vw,520px);aspect-ratio:1;pointer-events:none}
+  #overlay::before{transform:translateY(-28%);box-shadow:0 0 100px color-mix(in srgb,var(--level-color) 28%,transparent)}
+  #overlay::after{width:min(120vw,680px);transform:translateY(-28%)}
+  #overlay.show{display:flex;animation:overlay-enter .45s cubic-bezier(.2,.8,.2,1) both}
+  .overlay-card{width:min(100%,520px);padding:clamp(26px,7vw,44px) clamp(22px,6vw,40px);text-align:center;border:1px solid rgba(255,255,255,.16);border-radius:30px;background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.055));box-shadow:0 28px 90px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.14);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
+  .overlay-symbol{display:grid;place-items:center;width:66px;height:66px;margin:0 auto 22px;border-radius:22px;color:#fff;background:color-mix(in srgb,var(--level-color) 52%,#fff 10%);box-shadow:0 10px 34px color-mix(in srgb,var(--level-color) 48%,transparent),inset 0 1px rgba(255,255,255,.35)}
+  .overlay-symbol svg{width:30px;height:30px}
+  #ovTitle{font-size:.78rem;font-weight:750;opacity:.78;margin-bottom:20px;letter-spacing:.14em;text-transform:uppercase}
+  .overlay-progress{display:flex;gap:7px;max-width:260px;margin:0 auto 25px}
+  .overlay-progress span{height:5px;flex:1;border-radius:99px;background:rgba(255,255,255,.2);transition:background .3s,box-shadow .3s}
+  .overlay-progress span.active{background:#fff;box-shadow:0 0 12px rgba(255,255,255,.6)}
+  #ovMsg{font-size:clamp(1.8rem,7.5vw,3rem);font-weight:850;line-height:1.08;margin:0 auto 26px;letter-spacing:-.045em;text-wrap:balance;max-width:17ch}
+  .overlay-timing{display:inline-flex;align-items:center;gap:9px;min-height:46px;padding:0 16px;margin-bottom:28px;border:1px solid rgba(255,255,255,.17);border-radius:99px;background:rgba(10,12,20,.22);font-size:.98rem;font-weight:650;font-variant-numeric:tabular-nums}
+  .overlay-timing svg{width:17px;height:17px;opacity:.8}
+  #ovBtn{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;min-height:62px;padding:12px 20px;border:0;border-radius:19px;background:#fff;color:#191b27;font-size:1.08rem;font-weight:800;letter-spacing:-.01em;box-shadow:0 12px 30px rgba(0,0,0,.24);transition:transform .16s,box-shadow .16s}
+  #ovBtn:hover{background:#fff;box-shadow:0 15px 36px rgba(0,0,0,.3);transform:translateY(-2px)}
+  #ovBtn:active{transform:scale(.98)}
+  #ovBtn:focus-visible{outline:3px solid rgba(255,255,255,.7);outline-offset:4px}
+  .overlay-button-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#e9eaff;color:#4c50c8;font-size:1rem}
+  .overlay-hint{margin:15px 0 0;color:rgba(255,255,255,.58);font-size:.78rem}
+  @keyframes overlay-enter{from{opacity:0}to{opacity:1}}
+  @media(max-height:620px){.overlay-card{padding:20px}.overlay-symbol{width:48px;height:48px;margin-bottom:14px;border-radius:16px}.overlay-symbol svg{width:24px;height:24px}#ovTitle{margin-bottom:12px}.overlay-progress{margin-bottom:17px}#ovMsg{margin-bottom:17px}.overlay-timing{margin-bottom:18px}}
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -246,12 +262,29 @@
 </dialog>
 
 <div id="overlay">
-  <div id="ovTitle"></div>
-  <div id="ovMsg"></div>
-  <div id="ovCount"></div>
-  <button id="ovBtn">✅ Sto andando!</button>
+  <div class="overlay-card">
+    <div class="overlay-symbol" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3v2M5.64 5.64l1.42 1.42M3 12h2m14 0h2m-3.06-6.36-1.42 1.42M12 8v4l2.5 1.5"/>
+        <circle cx="12" cy="13" r="8"/>
+      </svg>
+    </div>
+    <div id="ovTitle"></div>
+    <div class="overlay-progress" id="ovProgress" role="progressbar" aria-label="Livello di promemoria" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div id="ovMsg"></div>
+    <div class="overlay-timing">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+      </svg>
+      <span id="ovCount"></span>
+    </div>
+    <button id="ovBtn"><span class="overlay-button-icon" aria-hidden="true">✓</span><span>Sto andando!</span></button>
+    <p class="overlay-hint">Tocca per confermare la routine</p>
+  </div>
 </div>
 
-<script src="app.js?v=motiva-v10"></script>
+<script src="app.js?v=motiva-v11"></script>
 </body>
 </html>

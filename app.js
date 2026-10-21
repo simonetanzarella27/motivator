@@ -191,9 +191,14 @@ function showOverlay(o, level, minsBefore) {
   const ov = $('#overlay');
   currentOverlayKey = o.key;
   ov.classList.add('show');
-  ov.style.background = LEVELS[level].color;
+  ov.style.setProperty('--level-color', LEVELS[level].color);
   $('#ovTitle').textContent = `${o.name} · livello ${level + 1}/5`;
   $('#ovMsg').textContent = messageFor(o.name, level);
+  const progress = $('#ovProgress');
+  progress.setAttribute('aria-valuenow', String(level + 1));
+  progress.querySelectorAll('span').forEach((step, index) => {
+    step.classList.toggle('active', index <= level);
+  });
   const m = Math.abs(minsBefore), mm = Math.floor(m), ss = Math.floor((m - mm) * 60);
   $('#ovCount').textContent = minsBefore >= 0 ? `Mancano ${mm}:${pad(ss)}` : `In ritardo di ${mm}:${pad(ss)}`;
 }
