@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<title>Motivatore</title>
+<style>
+  :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--txt:#e2e8f0;--mut:#94a3b8;--acc:#22c55e;--warn:#f59e0b;--bad:#ef4444}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--txt);padding:16px;max-width:640px;margin-inline:auto}
+  h1{font-size:1.4rem;margin:.2rem 0 1rem}
+  h2{font-size:1rem;margin:0 0 .6rem;color:var(--mut);text-transform:uppercase;letter-spacing:.05em}
+  section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+  button{font:inherit;border:0;border-radius:8px;padding:.55rem .9rem;background:#334155;color:var(--txt);cursor:pointer}
+  button.primary{background:var(--acc);color:#052e16;font-weight:600}
+  button.danger{background:transparent;color:var(--bad)}
+  input[type=text],input[type=time],input[type=number]{font:inherit;background:var(--bg);color:var(--txt);border:1px solid var(--line);border-radius:8px;padding:.5rem;width:100%}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:.5rem 0}
+  .days label{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.3rem .5rem}
+  .item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:.6rem 0;border-top:1px solid var(--line)}
+  .item:first-of-type{border-top:0}
+  .tag{font-size:.75rem;padding:.1rem .5rem;border-radius:99px;background:var(--bg);color:var(--mut)}
+  .tag.ok{color:var(--acc)} .tag.wait{color:var(--warn)}
+  .mut{color:var(--mut);font-size:.85rem}
+  .toggle{display:flex;justify-content:space-between;align-items:center;padding:.45rem 0}
+  #overlay{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;z-index:99;transition:background .5s}
+  #overlay.show{display:flex}
+  #ovTitle{font-size:1rem;opacity:.85;margin-bottom:.5rem}
+  #ovMsg{font-size:clamp(1.6rem,6vw,2.6rem);font-weight:800;margin:.5rem 0 1rem}
+  #ovCount{font-size:1.2rem;margin-bottom:2rem;font-variant-numeric:tabular-nums}
+  #ovBtn{font-size:1.4rem;padding:1rem 2rem;background:#fff;color:#111;font-weight:800;border-radius:14px}
+  .banner{background:#422006;border:1px solid var(--warn);color:#fde68a;border-radius:10px;padding:.6rem .8rem;margin-bottom:12px;display:none}
+</style>
+</head>
+<body>
+<h1>💪 Motivatore</h1>
+<div id="permBanner" class="banner">Le notifiche di sistema non sono attive. <button id="permBtn" class="primary">Attivale</button></div>
+
+<section>
+  <h2>Oggi</h2>
+  <div id="today"></div>
+</section>
+
+<section>
+  <h2>Nuova routine</h2>
+  <div class="row"><input type="text" id="rName" placeholder="Es. Palestra"></div>
+  <div class="row"><input type="time" id="rTime" value="17:00"></div>
+  <div class="row days" id="rDays"></div>
+  <div class="row"><button class="primary" id="rAdd">Aggiungi routine</button></div>
+</section>
+
+<section>
+  <h2>Le mie routine</h2>
+  <div id="list"></div>
+</section>
+
+<section>
+  <h2>Impostazioni</h2>
+  <div class="toggle"><span>Vibrazione crescente</span><input type="checkbox" id="sVib"></div>
+  <div class="toggle"><span>Suoni crescenti</span><input type="checkbox" id="sSound"></div>
+  <div class="toggle"><span>Messaggi sempre più decisi</span><input type="checkbox" id="sMsg"></div>
+  <div class="toggle"><span>Schermo intero / blocco nei livelli finali</span><input type="checkbox" id="sFull"></div>
+  <div class="toggle"><span>Notifiche di sistema</span><input type="checkbox" id="sNotif"></div>
+  <div class="row"><label class="mut" style="flex:1">Anticipo prima notifica (minuti)<input type="number" id="sLead" min="5" max="240"></label>
+  <label class="mut" style="flex:1">Tolleranza dopo l'orario (minuti)<input type="number" id="sGrace" min="0" max="120"></label></div>
+  <div class="row"><button id="sTest">▶ Simula escalation (60× più veloce)</button><button id="sStop" class="danger">Ferma simulazione</button></div>
+  <p class="mut">L'app deve restare aperta (anche in background) per far scattare le notifiche. Il primo tocco sulla pagina sblocca l'audio.</p>
+</section>
+
+<div id="overlay">
+  <div id="ovTitle"></div>
+  <div id="ovMsg"></div>
+  <div id="ovCount"></div>
+  <button id="ovBtn">✅ Sto andando!</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
