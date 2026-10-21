@@ -1,0 +1,9 @@
+{
+  "appId": "it.muvt.app",
+  "appName": "MUVT",
+  "webDir": "www",
+  "android": { "allowMixedContent": false },
+  "plugins": {
+    "LocalNotifications": { "smallIcon": "ic_stat_muvt", "iconColor": "#6366F1" }
+  }
+}

@@ -2,6 +2,10 @@
 const $ = s => document.querySelector(s);
 const DAYS = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 const LS = 'motivatore.v1';
+const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+const LN = NATIVE
+  ? ((window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) || window.Capacitor.registerPlugin('LocalNotifications'))
+  : null;
 
 const DEFAULTS = {
   routines: [],
@@ -43,7 +47,10 @@ function load() {
     };
   } catch (e) { return JSON.parse(JSON.stringify(DEFAULTS)); }
 }
-function save() { try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) {} }
+function save() {
+  try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) {}
+  if (NATIVE) nativeScheduleSoon();
+}
 
 const pad = n => String(n).padStart(2, '0');
 const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -100,6 +107,8 @@ function messageFor(name, level) {
 }
 
 function fire(o, level, minsBefore) {
+  // Nell'app Android le notifiche vere sono programmate dal sistema: qui scatta solo la simulazione
+  if (NATIVE && !sim) return;
   const L = LEVELS[level], s = state.settings;
   const text = messageFor(o.name, level);
   if (s.notif) notify(o, level, text);
@@ -121,6 +130,7 @@ async function notify(o, level, body) {
   } catch (e) {}
 }
 async function closeNotifications() {
+  if (NATIVE) { try { await LN.removeAllDeliveredNotifications(); } catch (e) {} return; }
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     if (!reg) return;
@@ -245,10 +255,12 @@ $('#sLead').addEventListener('change', e => { state.settings.lead = Math.max(5, 
 $('#sGrace').addEventListener('change', e => { state.settings.grace = Math.max(0, Number(e.target.value) || 30); save(); });
 
 function updatePermBanner() {
+  if (NATIVE) { nativeBanner(); return; }
   const need = state.settings.notif && 'Notification' in window && Notification.permission !== 'granted';
   $('#permBanner').style.display = need ? 'flex' : 'none';
 }
 function askPermission() {
+  if (NATIVE) { nativeAsk(); return; }
   if (!('Notification' in window)) return;
   Notification.requestPermission().then(updatePermBanner);
 }
@@ -335,7 +347,7 @@ $('#calToday').addEventListener('click', () => {
 // ---------- Installazione PWA ----------
 let deferredInstall = null;
 const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-if (!standalone) {
+if (!standalone && !NATIVE) {
   $('#installBox').style.display = 'block';
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
   $('#installHint').textContent = ios
@@ -353,8 +365,154 @@ $('#installBtn').addEventListener('click', async () => {
 });
 window.addEventListener('appinstalled', () => { $('#installBox').style.display = 'none'; });
 
+// ---------- Android nativo: allarmi programmati dal sistema ----------
+const HORIZON_DAYS = 4;        // giorni programmati in anticipo (ripianificati a ogni apertura)
+const MAX_ALARMS = 450;        // Android consente al massimo ~500 allarmi per app
+const IMPORTANCE = [3, 3, 4, 4, 5];
+const channelsDone = new Set();
+let nativeTimer = null, nativeBusy = false, nativeAgain = false;
+
+function hash32(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0) & 0x7fffffff;
+}
+
+// Orari delle notifiche di una singola occorrenza: [{ at, level }]
+function planOccurrence(startMs, lead, grace) {
+  const out = [], last = LEVELS.length - 1;
+  for (let i = 0; i <= last; i++) {
+    const from = startMs - LEVELS[i].frac * lead * 60000;
+    const to = i < last ? startMs - LEVELS[i + 1].frac * lead * 60000 : startMs + grace * 60000;
+    for (let t = from; t < to;) {
+      out.push({ at: Math.round(t), level: i });
+      // ultimo livello: ogni 30 s per 10 minuti, poi ogni 2 minuti (per non superare il limite di allarmi)
+      t += (i === last && t - from >= 10 * 60000) ? 120000 : LEVELS[i].every * 1000;
+    }
+  }
+  return out;
+}
+
+async function ensureChannel(level) {
+  const s = state.settings;
+  const id = `muvt_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}`;
+  if (!channelsDone.has(id)) {
+    await LN.createChannel({
+      id, name: `Livello ${level + 1}${s.vib ? '' : ' (senza vibrazione)'}${s.sound ? '' : ' (silenzioso)'}`,
+      description: 'Notifiche a intensità crescente di MUVT',
+      importance: IMPORTANCE[level], visibility: 1, lights: true, vibration: !!s.vib,
+      sound: s.sound ? `muvt_l${level + 1}.wav` : 'muvt_silent.wav'
+    });
+    channelsDone.add(id);
+  }
+  return id;
+}
+
+function nativeScheduleSoon() {
+  clearTimeout(nativeTimer);
+  nativeTimer = setTimeout(nativeReschedule, 400);
+}
+
+async function nativeReschedule() {
+  if (!NATIVE) return;
+  if (nativeBusy) { nativeAgain = true; return; }
+  nativeBusy = true;
+  try {
+    const pending = await LN.getPending();
+    if (pending.notifications && pending.notifications.length) {
+      await LN.cancel({ notifications: pending.notifications.map(n => ({ id: n.id })) });
+    }
+    const perm = await LN.checkPermissions();
+    if (perm.display !== 'granted' || !state.settings.notif) return;
+
+    const s = state.settings, now = Date.now(), list = [];
+    for (let d = 0; d < HORIZON_DAYS; d++) {
+      const day = new Date(); day.setDate(day.getDate() + d); day.setHours(0, 0, 0, 0);
+      for (const r of state.routines) {
+        if (!r.days.includes(weekday(day))) continue;
+        const key = dateKey(day) + '|' + r.id;
+        if (state.done[key]) continue;
+        const [h, m] = r.time.split(':').map(Number);
+        const start = new Date(day); start.setHours(h, m, 0, 0);
+        for (const p of planOccurrence(start.getTime(), s.lead, s.grace)) {
+          if (p.at > now + 3000) list.push({ at: p.at, level: p.level, key, name: r.name });
+        }
+      }
+    }
+    list.sort((a, b) => a.at - b.at);
+    list.length = Math.min(list.length, MAX_ALARMS);
+
+    const used = new Set(), notifications = [];
+    for (const it of list) {
+      let id = hash32(it.key + '#' + it.at);
+      while (used.has(id)) id = (id + 1) & 0x7fffffff;
+      used.add(id);
+      notifications.push({
+        id,
+        title: `${it.name} · livello ${it.level + 1}/5`,
+        body: messageFor(it.name, it.level),
+        channelId: await ensureChannel(it.level),
+        smallIcon: 'ic_stat_muvt', iconColor: '#6366F1',
+        group: 'muvt-' + it.key, autoCancel: true,
+        schedule: { at: new Date(it.at), allowWhileIdle: true },
+        extra: { key: it.key }
+      });
+    }
+    for (let i = 0; i < notifications.length; i += 100) {
+      await LN.schedule({ notifications: notifications.slice(i, i + 100) });
+    }
+  } catch (e) {
+    console.warn('MUVT: programmazione notifiche non riuscita', e);
+  } finally {
+    nativeBusy = false;
+    if (nativeAgain) { nativeAgain = false; nativeReschedule(); }
+  }
+}
+
+async function nativePermState() {
+  const p = await LN.checkPermissions();
+  let exact = 'granted';
+  try { exact = (await LN.checkExactNotificationSetting()).exact_alarm; } catch (e) {}
+  return { display: p.display, exact };
+}
+async function nativeBanner() {
+  const box = $('#permBanner');
+  try {
+    const p = await nativePermState();
+    const msg = p.display !== 'granted'
+      ? 'Le notifiche sono disattivate: senza non posso svegliarti.'
+      : p.exact !== 'granted' ? 'Consenti gli allarmi esatti, altrimenti le notifiche possono arrivare in ritardo.' : '';
+    box.querySelector('span').textContent = msg;
+    box.style.display = msg && state.settings.notif ? 'flex' : 'none';
+  } catch (e) { box.style.display = 'none'; }
+}
+async function nativeAsk() {
+  try {
+    const p = await nativePermState();
+    if (p.display !== 'granted') await LN.requestPermissions();
+    else if (p.exact !== 'granted') await LN.changeExactNotificationSetting();
+  } catch (e) {}
+  nativeBanner(); nativeReschedule();
+}
+async function nativeInit() {
+  try {
+    const p = await LN.checkPermissions();
+    if (p.display === 'prompt' || p.display === 'prompt-with-rationale') await LN.requestPermissions();
+  } catch (e) {}
+  nativeBanner();
+  nativeReschedule();
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { nativeBanner(); nativeReschedule(); tick(); }
+  });
+}
+
 // ---------- Avvio ----------
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && !NATIVE) navigator.serviceWorker.register('sw.js').catch(() => {});
+if (NATIVE) {
+  const note = $('#settingsNote');
+  if (note) note.textContent = 'Le notifiche sono programmate dal sistema Android e arrivano anche con l\'app chiusa. La simulazione va 60 volte più veloce.';
+}
 render();
 setInterval(tick, 1000);
 tick();
+if (NATIVE) nativeInit();

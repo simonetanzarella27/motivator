@@ -1,0 +1,49 @@
+name: Build APK Android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'native/**'
+      - 'index.html'
+      - 'app.js'
+      - 'manifest.json'
+      - 'icon*'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: native/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Prepara i file web e sincronizza Capacitor
+        working-directory: native
+        run: |
+          npm ci
+          npm run sync
+
+      - name: Compila l'APK
+        working-directory: native/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: muvt-apk
+          path: native/android/app/build/outputs/apk/debug/app-debug.apk
