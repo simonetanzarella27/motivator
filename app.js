@@ -195,10 +195,43 @@ function startSim() {
 function stopSim() { sim = null; delete runtime.sim; hideOverlay(); closeNotifications(); render(); }
 $('#sTest').addEventListener('click', () => { unlockAudio(); startSim(); });
 $('#sStop').addEventListener('click', stopSim);
-$('#settingsOpen').addEventListener('click', () => $('#settingsDialog').showModal());
-$('#settingsClose').addEventListener('click', () => $('#settingsDialog').close());
-$('#settingsDialog').addEventListener('click', e => {
-  if (e.target === e.currentTarget) e.currentTarget.close();
+const settingsDialog = $('#settingsDialog');
+const settingsButton = $('#settingsOpen');
+function openSettings() {
+  if (settingsDialog.open) return;
+  settingsButton.setAttribute('aria-expanded', 'true');
+  if (typeof settingsDialog.showModal === 'function') {
+    settingsDialog.showModal();
+  } else {
+    settingsDialog.classList.add('settings-fallback');
+    settingsDialog.setAttribute('open', '');
+    settingsDialog.setAttribute('aria-modal', 'true');
+    $('#settingsClose').focus();
+  }
+}
+function closeSettings() {
+  if (settingsDialog.classList.contains('settings-fallback')) {
+    settingsDialog.classList.remove('settings-fallback');
+    settingsDialog.removeAttribute('open');
+    settingsDialog.removeAttribute('aria-modal');
+  } else {
+    if (!settingsDialog.open) return;
+    settingsDialog.close();
+  }
+  settingsButton.setAttribute('aria-expanded', 'false');
+  settingsButton.focus();
+}
+settingsButton.addEventListener('click', openSettings);
+$('#settingsClose').addEventListener('click', closeSettings);
+settingsDialog.addEventListener('close', () => settingsButton.setAttribute('aria-expanded', 'false'));
+settingsDialog.addEventListener('click', e => {
+  if (e.target === settingsDialog) closeSettings();
+});
+document.addEventListener('click', e => {
+  if (settingsDialog.classList.contains('settings-fallback') && !settingsDialog.contains(e.target)) closeSettings();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && settingsDialog.classList.contains('settings-fallback')) closeSettings();
 });
 
 // ---------- UI ----------

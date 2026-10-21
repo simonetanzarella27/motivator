@@ -123,9 +123,11 @@
   .settings-tools{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}
 
   .banner{display:none;background:var(--warnSoft);border:1px solid var(--warnBorder);color:var(--warnText);border-radius:14px;padding:.8rem 1rem;margin-bottom:16px;align-items:center;justify-content:space-between;gap:12px}
-  dialog{width:min(100%,560px);max-height:min(90dvh,760px);overflow:auto;margin:auto;padding:18px;background:var(--card);color:var(--txt);
+  dialog{width:calc(100% - 32px);width:min(100%,560px);max-height:90vh;max-height:min(90dvh,760px);overflow:auto;margin:auto;padding:18px;background:var(--card);color:var(--txt);
     border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
   dialog::backdrop{background:rgba(15,18,30,.58);backdrop-filter:blur(3px)}
+  dialog.settings-fallback[open]{position:fixed;left:50%;top:50%;z-index:100;display:block;transform:translate(-50%,-50%);
+    box-shadow:0 0 0 100vmax rgba(15,18,30,.58),var(--shadow)}
   .settings-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
   .settings-dialog-head h2{margin:0}
   .settings-dialog-head button{padding:.35rem .65rem;font-size:1.3rem;line-height:1}
@@ -153,7 +155,7 @@
     <h1>Motiva</h1>
     <p class="sub">Niente scuse: ti spinge finché non parti.</p>
   </div>
-  <button class="settings-open" id="settingsOpen" aria-label="Apri impostazioni" aria-haspopup="dialog" aria-controls="settingsDialog">
+  <button class="settings-open" id="settingsOpen" aria-label="Apri impostazioni" aria-haspopup="dialog" aria-controls="settingsDialog" aria-expanded="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="3"></circle>
       <path d="m19.4 15 .1.1a1.7 1.7 0 0 1-2.4 2.4l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a1.7 1.7 0 0 1-3.4 0v-.2a1.7 1.7 0 0 0-2.9-1.2l-.1.1a1.7 1.7 0 0 1-2.4-2.4l.1-.1a1.7 1.7 0 0 0-1.2-2.9H4a1.7 1.7 0 0 1 0-3.4h.2a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a1.7 1.7 0 0 1 2.4-2.4l.1.1a1.7 1.7 0 0 0 2.9-1.2V2a1.7 1.7 0 0 1 3.4 0v.2a1.7 1.7 0 0 0 2.9 1.2l.1-.1a1.7 1.7 0 0 1 2.4 2.4l-.1.1a1.7 1.7 0 0 0 1.2 2.9h.2a1.7 1.7 0 0 1 0 3.4h-.2a1.7 1.7 0 0 0-1.2 2.9z"></path>
