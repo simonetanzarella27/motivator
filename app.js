@@ -461,7 +461,7 @@ function planOccurrence(startMs, lead, grace) {
 
 async function ensureChannel(level) {
   const s = state.settings;
-  const id = `motiva_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}_h2`;
+  const id = `motiva_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}_h3`;
   if (!channelsDone.has(id)) {
     await LN.createChannel({
       id, name: `Livello ${level + 1}${s.vib ? '' : ' (senza vibrazione)'}${s.sound ? '' : ' (silenzioso)'}`,
