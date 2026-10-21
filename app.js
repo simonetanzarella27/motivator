@@ -6,6 +6,9 @@ const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform && windo
 const LN = NATIVE
   ? ((window.Capacitor.Plugins && window.Capacitor.Plugins.LocalNotifications) || window.Capacitor.registerPlugin('LocalNotifications'))
   : null;
+const NV = NATIVE
+  ? ((window.Capacitor.Plugins && window.Capacitor.Plugins.NotificationChannelVibration) || window.Capacitor.registerPlugin('NotificationChannelVibration'))
+  : null;
 
 const DEFAULTS = {
   routines: [],
@@ -446,7 +449,7 @@ function planOccurrence(startMs, lead, grace) {
 
 async function ensureChannel(level) {
   const s = state.settings;
-  const id = `muvt_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}`;
+  const id = `motiva_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}_h1`;
   if (!channelsDone.has(id)) {
     await LN.createChannel({
       id, name: `Livello ${level + 1}${s.vib ? '' : ' (senza vibrazione)'}${s.sound ? '' : ' (silenzioso)'}`,
@@ -454,6 +457,7 @@ async function ensureChannel(level) {
       importance: IMPORTANCE[level], visibility: 1, lights: true, vibration: !!s.vib,
       sound: s.sound ? `muvt_l${level + 1}.wav` : 'muvt_silent.wav'
     });
+    if (s.vib) await NV.setPattern({ channelId: id, pattern: LEVELS[level].vib });
     channelsDone.add(id);
   }
   return id;
@@ -475,6 +479,8 @@ async function nativeReschedule() {
     }
     const perm = await LN.checkPermissions();
     if (perm.display !== 'granted' || !state.settings.notif) return;
+    const exact = await LN.checkExactNotificationSetting();
+    if (exact.exact_alarm !== 'granted') return;
 
     const s = state.settings, now = Date.now(), list = [];
     for (let d = 0; d < HORIZON_DAYS; d++) {
@@ -502,6 +508,8 @@ async function nativeReschedule() {
         id,
         title: `${it.name} · livello ${it.level + 1}/5`,
         body: messageFor(it.name, it.level),
+        isExactNotification: true,
+        isExactMandatory: true,
         channelId: await ensureChannel(it.level),
         smallIcon: 'ic_stat_muvt', iconColor: '#6366F1',
         group: 'muvt-' + it.key, autoCancel: true,
@@ -510,10 +518,14 @@ async function nativeReschedule() {
       });
     }
     for (let i = 0; i < notifications.length; i += 100) {
-      await LN.schedule({ notifications: notifications.slice(i, i + 100) });
+      const result = await LN.schedule({ notifications: notifications.slice(i, i + 100) });
+      if (result.warning) throw new Error(result.warning.message);
     }
   } catch (e) {
     console.warn('Motiva: programmazione notifiche non riuscita', e);
+    const box = $('#permBanner');
+    box.querySelector('span').textContent = 'Non sono riuscita a programmare le notifiche. Riapri l’app e controlla i permessi.';
+    box.style.display = state.settings.notif ? 'flex' : 'none';
   } finally {
     nativeBusy = false;
     if (nativeAgain) { nativeAgain = false; nativeReschedule(); }
@@ -535,21 +547,30 @@ async function nativeBanner() {
       : p.exact !== 'granted' ? 'Consenti gli allarmi esatti, altrimenti le notifiche possono arrivare in ritardo.' : '';
     box.querySelector('span').textContent = msg;
     box.style.display = msg && state.settings.notif ? 'flex' : 'none';
-  } catch (e) { box.style.display = 'none'; }
+  } catch (e) {
+    console.warn('Motiva: verifica dei permessi notifiche non riuscita', e);
+    box.querySelector('span').textContent = 'Impossibile verificare i permessi delle notifiche.';
+    box.style.display = state.settings.notif ? 'flex' : 'none';
+  }
 }
 async function nativeAsk() {
   try {
     const p = await nativePermState();
     if (p.display !== 'granted') await LN.requestPermissions();
-    else if (p.exact !== 'granted') await LN.changeExactNotificationSetting();
-  } catch (e) {}
+    const exact = await LN.checkExactNotificationSetting();
+    if (exact.exact_alarm !== 'granted') await LN.changeExactNotificationSetting();
+  } catch (e) {
+    console.warn('Motiva: richiesta dei permessi notifiche non riuscita', e);
+  }
   nativeBanner(); nativeReschedule();
 }
 async function nativeInit() {
   try {
     const p = await LN.checkPermissions();
     if (p.display === 'prompt' || p.display === 'prompt-with-rationale') await LN.requestPermissions();
-  } catch (e) {}
+  } catch (e) {
+    console.warn('Motiva: inizializzazione dei permessi notifiche non riuscita', e);
+  }
   nativeBanner();
   nativeReschedule();
   document.addEventListener('visibilitychange', () => {
