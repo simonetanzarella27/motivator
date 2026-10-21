@@ -350,8 +350,8 @@ $('#sFrequency').addEventListener('input', e => {
   const frequency = Math.max(1, Math.min(5, Number(e.target.value) || 3));
   state.settings.frequency = frequency;
   $('#sFrequencyValue').textContent = FREQUENCY_LABELS[frequency - 1];
-  save();
 });
+$('#sFrequency').addEventListener('change', save);
 
 function updatePermBanner() {
   if (NATIVE) { nativeBanner(); return; }
@@ -495,6 +495,40 @@ function planOccurrence(startMs, lead, grace) {
   return out;
 }
 
+function limitScheduledAlarms(alarms, limit) {
+  const ordered = [...alarms].sort((a, b) => a.at - b.at);
+  if (ordered.length <= limit) return { alarms: ordered, limited: false };
+
+  const selected = [], selectedTimes = new Set();
+  const add = alarm => {
+    const signature = `${alarm.key}#${alarm.at}`;
+    if (selectedTimes.has(signature) || selected.length >= limit) return;
+    selectedTimes.add(signature);
+    selected.push(alarm);
+  };
+
+  const firstByOccurrence = new Set();
+  for (const alarm of ordered) {
+    if (!firstByOccurrence.has(alarm.key)) {
+      firstByOccurrence.add(alarm.key);
+      add(alarm);
+    }
+  }
+
+  const firstByPhase = new Set();
+  for (const alarm of ordered) {
+    const signature = `${alarm.key}#${alarm.level}`;
+    if (!firstByPhase.has(signature)) {
+      firstByPhase.add(signature);
+      add(alarm);
+    }
+  }
+
+  for (const alarm of ordered) add(alarm);
+  selected.sort((a, b) => a.at - b.at);
+  return { alarms: selected, limited: true };
+}
+
 async function ensureChannel(level) {
   const s = state.settings;
   const id = `motiva_l${level + 1}_v${s.vib ? 1 : 0}_s${s.sound ? 1 : 0}_h5`;
@@ -556,13 +590,13 @@ async function nativeReschedule() {
         }
       }
     }
-    list.sort((a, b) => a.at - b.at);
-    list.length = Math.min(list.length, MAX_ALARMS);
+    const schedule = limitScheduledAlarms(list, MAX_ALARMS);
+    const scheduledAlarms = schedule.alarms;
 
     const status = await NV.getStatus();
     const useFullScreen = s.full && exactAllowed && status.fullScreenIntentAllowed;
     const used = new Set(), notifications = [], fullScreenNotifications = [];
-    for (const it of list) {
+    for (const it of scheduledAlarms) {
       let id = hash32(it.key + '#' + it.at);
       while (used.has(id)) id = (id + 1) & 0x7fffffff;
       used.add(id);
@@ -619,9 +653,9 @@ async function nativeReschedule() {
         }
       }
     }
-    const next = list[0];
-    const capacityNote = list.length >= MAX_ALARMS
-      ? ` Limite di ${MAX_ALARMS} avvisi raggiunto: alcuni avvisi più lontani non sono inclusi.`
+    const next = scheduledAlarms[0];
+    const capacityNote = schedule.limited
+      ? ` Limite Android di ${MAX_ALARMS} avvisi: priorità data al primo avviso e al primo avviso di ogni fase di ciascuna routine.`
       : '';
     const exactNote = exactAllowed
       ? ' Allarmi esatti autorizzati.'
@@ -633,7 +667,7 @@ async function nativeReschedule() {
         : ' Apertura non programmata: manca il permesso allarmi esatti o full-screen.';
     nativeScheduleStatus(
       next
-        ? `${list.length} avvisi programmati. Prossimo: ${new Date(next.at).toLocaleString()}. Frequenza: ${FREQUENCY_LABELS[s.frequency - 1] || 'Normale'}.${exactNote}${fullScreenNote}${capacityNote}`
+        ? `${scheduledAlarms.length} avvisi programmati. Prossimo: ${new Date(next.at).toLocaleString()}. Frequenza: ${FREQUENCY_LABELS[s.frequency - 1] || 'Normale'}.${exactNote}${fullScreenNote}${capacityNote}`
         : 'Nessun avviso futuro nei prossimi 4 giorni: controlla giorni, orario e anticipo della routine.'
     );
   } catch (e) {
