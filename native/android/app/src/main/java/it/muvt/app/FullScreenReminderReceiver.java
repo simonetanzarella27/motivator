@@ -78,7 +78,9 @@ public class FullScreenReminderReceiver extends BroadcastReceiver {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             builder.setDefaults(Notification.DEFAULT_SOUND | Notification.DEFAULT_LIGHTS);
             if (vibration != null && vibration.length > 0) {
-                builder.setVibrate(vibration);
+                long[] pattern = new long[vibration.length + 1];
+                System.arraycopy(vibration, 0, pattern, 1, vibration.length);
+                builder.setVibrate(pattern);
             } else {
                 builder.setDefaults(Notification.DEFAULT_ALL);
             }

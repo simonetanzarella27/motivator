@@ -278,10 +278,22 @@ $('#rDays').innerHTML = DAYS.map((d, i) =>
 $('#rAdd').addEventListener('click', () => {
   const name = $('#rName').value.trim(), time = $('#rTime').value;
   const days = [...document.querySelectorAll('#rDays input:checked')].map(i => Number(i.value));
-  if (!name || !time || !days.length) { alert('Inserisci nome, orario e almeno un giorno.'); return; }
+  const error = $('#rError');
+  if (!name || !time || !days.length) {
+    error.textContent = !name ? 'Inserisci il nome della routine.'
+      : !time ? 'Scegli un orario per la routine.'
+        : 'Seleziona almeno un giorno.';
+    error.hidden = false;
+    (!name ? $('#rName') : !time ? $('#rTime') : $('#rDays input')).focus();
+    return;
+  }
+  error.hidden = true;
   state.routines.push({ id: Date.now().toString(36), name, time, days });
   save(); $('#rName').value = ''; render();
 });
+$('#rName').addEventListener('input', () => { $('#rError').hidden = true; });
+$('#rTime').addEventListener('input', () => { $('#rError').hidden = true; });
+$('#rDays').addEventListener('change', () => { $('#rError').hidden = true; });
 
 // ---------- Impostazioni ----------
 const BOOLS = { sVib: 'vib', sSound: 'sound', sMsg: 'msg', sFull: 'full', sNotif: 'notif' };
@@ -480,8 +492,12 @@ async function nativeReschedule() {
     }
     const perm = await LN.checkPermissions();
     if (perm.display !== 'granted' || !state.settings.notif) return;
-    const exact = await LN.checkExactNotificationSetting();
-    if (exact.exact_alarm !== 'granted') return;
+    let exactAllowed = false;
+    try {
+      exactAllowed = (await LN.checkExactNotificationSetting()).exact_alarm === 'granted';
+    } catch (e) {
+      console.warn('Motiva: verifica degli allarmi esatti non riuscita; userò notifiche non esatte', e);
+    }
 
     const s = state.settings, now = Date.now(), list = [];
     for (let d = 0; d < HORIZON_DAYS; d++) {
@@ -501,7 +517,7 @@ async function nativeReschedule() {
     list.length = Math.min(list.length, MAX_ALARMS);
 
     const status = await NV.getStatus();
-    const useFullScreen = s.full && status.fullScreenIntentAllowed;
+    const useFullScreen = s.full && exactAllowed && status.fullScreenIntentAllowed;
     const used = new Set(), notifications = [], fullScreenNotifications = [];
     for (const it of list) {
       let id = hash32(it.key + '#' + it.at);
@@ -512,8 +528,8 @@ async function nativeReschedule() {
         id,
         title: `${it.name} · livello ${it.level + 1}/5`,
         body: messageFor(it.name, it.level),
-        isExactNotification: true,
-        isExactMandatory: true,
+        isExactNotification: exactAllowed,
+        isExactMandatory: exactAllowed,
         channelId,
         smallIcon: 'ic_stat_muvt', iconColor: '#6366F1',
         group: 'muvt-' + it.key, autoCancel: true,
@@ -536,7 +552,29 @@ async function nativeReschedule() {
       if (result.warning) throw new Error(result.warning.message);
     }
     if (fullScreenNotifications.length) {
-      await NV.scheduleFullScreen({ notifications: fullScreenNotifications });
+      try {
+        await NV.scheduleFullScreen({ notifications: fullScreenNotifications });
+      } catch (e) {
+        console.warn('Motiva: notifiche full-screen non programmate; userò notifiche normali', e);
+        const fallback = fullScreenNotifications.map(it => ({
+          id: it.id,
+          title: it.title,
+          body: it.body,
+          isExactNotification: exactAllowed,
+          isExactMandatory: exactAllowed,
+          channelId: it.channelId,
+          smallIcon: 'ic_stat_muvt',
+          iconColor: '#6366F1',
+          group: 'muvt-' + it.key,
+          autoCancel: true,
+          schedule: { at: new Date(it.at), allowWhileIdle: true },
+          extra: { key: it.key }
+        }));
+        for (let i = 0; i < fallback.length; i += 100) {
+          const result = await LN.schedule({ notifications: fallback.slice(i, i + 100) });
+          if (result.warning) throw new Error(result.warning.message);
+        }
+      }
     }
   } catch (e) {
     console.warn('Motiva: programmazione notifiche non riuscita', e);
@@ -551,8 +589,12 @@ async function nativeReschedule() {
 
 async function nativePermState() {
   const p = await LN.checkPermissions();
-  let exact = 'granted';
-  exact = (await LN.checkExactNotificationSetting()).exact_alarm;
+  let exact = 'unknown';
+  try {
+    exact = (await LN.checkExactNotificationSetting()).exact_alarm;
+  } catch (e) {
+    console.warn('Motiva: verifica degli allarmi esatti non riuscita', e);
+  }
   return { display: p.display, exact };
 }
 async function nativeBanner() {

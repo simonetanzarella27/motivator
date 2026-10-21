@@ -52,11 +52,20 @@ public class AndroidReminderPlugin extends Plugin {
             call.reject("Canale di notifica non trovato: " + channelId);
             return;
         }
+        if (values.length() == 0) {
+            call.reject("Il pattern di vibrazione non può essere vuoto");
+            return;
+        }
 
         try {
-            long[] pattern = new long[values.length()];
+            long[] pattern = new long[values.length() + 1];
             for (int i = 0; i < values.length(); i++) {
-                pattern[i] = values.getLong(i);
+                long duration = values.getLong(i);
+                if (duration < 0) {
+                    call.reject("La durata della vibrazione non può essere negativa");
+                    return;
+                }
+                pattern[i + 1] = duration;
             }
             channel.enableVibration(true);
             channel.setVibrationPattern(pattern);
